@@ -9,6 +9,7 @@ import axios from "axios";
 import { User } from "../types";
 import { API_URL } from "../config";
 
+// Point axios directly to your Render backend API
 axios.defaults.baseURL = `${API_URL}/api`;
 axios.defaults.withCredentials = true;
 
@@ -56,27 +57,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: rawUser.email,
       role: rawUser.role,
       name: rawUser.name,
-      // your User type most likely uses `assignedVehicle`
       assignedVehicle: rawUser.assignedVehicleId || null,
     };
 
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(normalizedUser));
-
-    // store explicit ids for other components
     localStorage.setItem("userId", normalizedUser.id);
+
     if (normalizedUser.assignedVehicle) {
-      localStorage.setItem(
-        "assignedVehicleId",
-        normalizedUser.assignedVehicle
-      );
+      localStorage.setItem("assignedVehicleId", normalizedUser.assignedVehicle);
     }
 
     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     setUser(normalizedUser);
   };
 
-  // LOGIN (password)
+  // LOGIN
   const login = async (email: string, password: string) => {
     setApiLoading(true);
     try {

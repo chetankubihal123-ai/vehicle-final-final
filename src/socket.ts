@@ -1,15 +1,15 @@
+// src/socket.ts
 import { io } from "socket.io-client";
-import { API_URL } from "./config";
+import { WS_URL } from "./config";
 
-// Use backend for WebSocket
-export const socket = io(API_URL, {
+// WebSocket connection to backend on Render
+export const socket = io(WS_URL, {
   autoConnect: false,
   transports: ["websocket"],
-  auth: (cb) => {
-    const token = localStorage.getItem("token");
-    cb({ token });
+  auth: {
+    token: localStorage.getItem("token") || "",
   },
   extraHeaders: {
-    Authorization: `Bearer ${localStorage.getItem("token") || ""}`
-  }
+    Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+  },
 });

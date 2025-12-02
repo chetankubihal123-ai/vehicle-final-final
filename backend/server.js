@@ -44,20 +44,17 @@ app.get("/", (req, res) => {
   res.send("Vehicle Management System API is running");
 });
 
-/* -------------------------
-   Create HTTP Server FIRST
--------------------------- */
+// -------------------------------
+// Create HTTP server BEFORE Socket.IO
+// -------------------------------
 const server = http.createServer(app);
 
-/* -------------------------
-   Initialize Socket.IO
--------------------------- */
+// -------------------------------
+// Socket.IO Initialization
+// -------------------------------
 const io = new Server(server, {
   cors: {
-    origin: [
-      "https://vehicle-frontend-tuhe.onrender.com",
-      "http://localhost:5173",
-    ],
+    origin: "*",
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -196,11 +193,8 @@ io.on("connection", (socket) => {
   });
 });
 
-/* -------------------------
-   Start server properly
--------------------------- */
+// Start Server
 const PORT = process.env.PORT || 5000;
-
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 });
