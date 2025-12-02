@@ -1,238 +1,297 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
-import { API_URL } from '../config';
-import { MapPin, X, Navigation } from 'lucide-react';
+// src/components/DriverLocationService.tsx
+import { useEffect, useState, useRef } from "react";
+import { MapPin, X, Navigation } from "lucide-react";
+import axios from "axios";
+import { API_URL } from "../config";
+import { socket } from "../socket";
+
+type IntervalHandle = number | null;
 
 export default function DriverLocationService() {
-    const [isTracking, setIsTracking] = useState(false);
-    const [permissionRequested, setPermissionRequested] = useState(false);
-    const [error, setError] = useState('');
-    const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-    const [updateCount, setUpdateCount] = useState(0);
+  const [isTracking, setIsTracking] = useState(false);
+  const [error, setError] = useState("");
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [updateCount, setUpdateCount] = useState(0);
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-    // Fetch assigned vehicle ID if missing
-    useEffect(() => {
-        const fetchAssignedVehicle = async () => {
-            const vehicleId = localStorage.getItem('assignedVehicleId');
-            const token = localStorage.getItem('token');
+  const gpsTimerRef = useRef<IntervalHandle>(null);
+  const wakeLockRef = useRef<any>(null);
 
-            if (!vehicleId && token) {
-                try {
-                    console.log('🔍 Fetching assigned vehicle ID...');
-                    const response = await axios.get(`${API_URL}/api/auth/me`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    });
-
-                    if (response.data.assignedVehicleId) {
-                        console.log('✅ Found assigned vehicle:', response.data.assignedVehicleId);
-                        localStorage.setItem('assignedVehicleId', response.data.assignedVehicleId);
-                        // Clear any previous "No vehicle assigned" error
-                        setError('');
-                    } else {
-                        console.warn('⚠️ No vehicle assigned to this driver');
-                        setError('No vehicle assigned. Please contact admin.');
-                    }
-                } catch (err) {
-                    console.error('❌ Error fetching user details:', err);
-                }
-            }
-        };
-
-        fetchAssignedVehicle();
-    }, []);
-
-    const requestLocationPermission = () => {
-        alert('Button clicked!');
-        console.log('📍 Button clicked! Requesting location permission...');
-
-        if (!navigator.geolocation) {
-            const msg = 'Geolocation not supported by your browser';
-            alert('ERROR: ' + msg);
-            console.error('❌ Geolocation not supported');
-            setError(msg);
-            return;
+  // -------------------------------
+  // 1. Fetch driver profile + vehicle
+  // -------------------------------
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.warn("[DRIVER] No token in localStorage");
+          return;
         }
 
-        alert('Geolocation is supported! Requesting permission...');
-        console.log('✅ Setting permission requested state...');
-        setPermissionRequested(true);
+        const res = await axios.get(`${API_URL}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-        // Request permission
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                alert('SUCCESS! Permission granted');
-                console.log('✅ Permission granted!', position);
-                setIsTracking(true);
-                setError('');
-            },
-            (err) => {
-                alert(`ERROR: ${err.message} (code: ${err.code})`);
-                console.error('❌ Permission error:', err);
-                setPermissionRequested(false);
-                if (err.code === 1) {
-                    setError('Location permission denied. Please enable location access in your browser settings.');
-                } else if (err.code === 2) {
-                    setError('Location unavailable. Make sure GPS is enabled.');
-                } else {
-                    setError(`Location error: ${err.message}`);
-                }
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            }
-        );
+        console.log("[DRIVER] loaded /auth/me:", res.data);
+
+        // Save driver id and assigned vehicle for later use
+        localStorage.setItem("userId", res.data.id);
+        if (res.data.assignedVehicleId) {
+          localStorage.setItem("assignedVehicleId", res.data.assignedVehicleId);
+        } else {
+          console.warn("[DRIVER] No assigned vehicle for this driver");
+        }
+      } catch (e) {
+        console.error("[DRIVER] /auth/me error:", e);
+        setError("Failed to load driver profile");
+      }
+    })();
+  }, []);
+
+  // -------------------------------
+  // 2. Base socket connection
+  // -------------------------------
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.warn("[DRIVER] No token, not connecting socket");
+      return;
+    }
+
+    // Attach auth token & connect once
+    socket.auth = { token };
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    const onConnect = () => {
+      console.log("[DRIVER] socket connected:", socket.id);
+      setIsSocketConnected(true);
+      setError("");
+    };
+    const onDisconnect = () => {
+      console.log("[DRIVER] socket disconnected");
+      setIsSocketConnected(false);
+    };
+    const onConnectError = (err: any) => {
+      console.error("[DRIVER] socket connect_error:", err.message);
+      setIsSocketConnected(false);
+      setError("Socket connection failed: " + err.message);
     };
 
-    useEffect(() => {
-        if (!isTracking) return;
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("connect_error", onConnectError);
 
-        console.log('🚗 Starting location tracking...');
-        const watchId = navigator.geolocation.watchPosition(
-            async (position) => {
-                const vehicleId = localStorage.getItem('assignedVehicleId');
-                const token = localStorage.getItem('token');
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("connect_error", onConnectError);
+      socket.disconnect();
+    };
+  }, []);
 
-                if (!vehicleId || !token) {
-                    setError('No vehicle assigned');
-                    return;
-                }
-
-                try {
-                    await axios.post(
-                        `${API_URL}/api/vehicles/${vehicleId}/location`,
-                        {
-                            latitude: position.coords.latitude,
-                            longitude: position.coords.longitude,
-                            timestamp: new Date(),
-                            speed: position.coords.speed || 0
-                        },
-                        {
-                            headers: { Authorization: `Bearer ${token}` }
-                        }
-                    );
-
-                    setLastUpdate(new Date());
-                    setUpdateCount(prev => prev + 1);
-                    setError('');
-                    console.log('📡 Location updated successfully');
-                } catch (err: any) {
-                    console.error('❌ Location update failed:', err);
-                    setError(err.response?.data?.message || 'Update failed');
-                }
-            },
-            (err) => {
-                console.error('❌ Geolocation error:', err);
-                setError(`Location error: ${err.message}`);
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            }
+  // -------------------------------
+  // 3. Optional wake-lock (screen on)
+  // -------------------------------
+  const requestWakeLock = async () => {
+    try {
+      if ("wakeLock" in navigator && (navigator as any).wakeLock?.request) {
+        wakeLockRef.current = await (navigator as any).wakeLock.request(
+          "screen"
         );
+        console.log("[DRIVER] wake lock acquired");
+        wakeLockRef.current.addEventListener("release", () => {
+          console.log("[DRIVER] wake lock released");
+        });
+      } else {
+        console.log("[DRIVER] wake lock not supported (ok)");
+      }
+    } catch (e) {
+      console.warn("[DRIVER] wake lock error:", e);
+    }
+  };
 
-        return () => {
-            console.log('🛑 Stopping location tracking');
-            navigator.geolocation.clearWatch(watchId);
-        };
-    }, [isTracking]);
+  const releaseWakeLock = async () => {
+    try {
+      if (wakeLockRef.current) {
+        await wakeLockRef.current.release();
+        wakeLockRef.current = null;
+      }
+    } catch {
+      /* ignore */
+    }
+  };
 
-    // Debug: Always log when component renders
-    console.log('DriverLocationService render:', { isTracking, permissionRequested, error });
+  // -------------------------------
+  // 4. Start tracking
+  // -------------------------------
+  const startTracking = async () => {
+    const driverId = localStorage.getItem("userId");
+    const vehicleId = localStorage.getItem("assignedVehicleId");
+    const token = localStorage.getItem("token");
 
-    // Show button to enable tracking
-    if (!isTracking && !permissionRequested) {
-        return (
-            <div
-                className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-2xl shadow-2xl"
-                style={{ zIndex: 9999 }}
-            >
-                <div className="text-center">
-                    <Navigation className="h-12 w-12 mx-auto mb-4 animate-bounce" />
-                    <h3 className="text-xl font-bold mb-2">Enable Location Tracking</h3>
-                    <p className="text-sm text-blue-100 mb-4">
-                        Share your live location to help track this vehicle
-                    </p>
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            requestLocationPermission();
-                        }}
-                        onTouchEnd={(e) => {
-                            e.preventDefault();
-                            requestLocationPermission();
-                        }}
-                        className="w-full bg-white text-blue-600 px-6 py-3 rounded-xl font-bold text-lg hover:bg-blue-50 transition-all transform active:scale-95 shadow-lg"
-                        style={{ cursor: 'pointer', touchAction: 'manipulation' }}
-                    >
-                        📍 Enable Location Tracking
-                    </button>
-                    <p className="text-xs text-blue-200 mt-3">
-                        Your browser will ask for permission
-                    </p>
-                </div>
-            </div>
-        );
+    console.log("[DRIVER] startTracking for:", {
+      driverId,
+      vehicleId,
+      tokenExists: !!token,
+    });
+
+    if (!token) {
+      setError("Not authenticated. Please login again.");
+      return;
     }
 
-    // Requesting permission
-    if (permissionRequested && !isTracking && !error) {
-        return (
-            <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-blue-600 text-white p-4 rounded-lg shadow-lg animate-pulse" style={{ zIndex: 9999 }}>
-                <div className="flex items-center gap-3">
-                    <MapPin className="h-6 w-6 animate-ping" />
-                    <div className="flex-1">
-                        <p className="font-semibold">Requesting permission...</p>
-                        <p className="text-xs text-blue-200">Please allow location access when prompted</p>
-                    </div>
-                </div>
-            </div>
-        );
+    if (!vehicleId || !driverId) {
+      setError("Driver or vehicle ID missing");
+      return;
     }
 
-    // Error state
-    if (error) {
-        return (
-            <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-red-600 text-white p-4 rounded-lg shadow-lg" style={{ zIndex: 9999 }}>
-                <div className="flex items-start gap-3">
-                    <div className="flex-1">
-                        <p className="font-semibold mb-1">Location Tracking Error</p>
-                        <p className="text-sm text-red-100">{error}</p>
-                        <button
-                            type="button"
-                            onClick={requestLocationPermission}
-                            className="mt-3 w-full bg-white text-red-600 px-4 py-2 rounded-lg font-semibold hover:bg-red-50 transition"
-                        >
-                            Try Again
-                        </button>
-                    </div>
-                    <button type="button" onClick={() => setError('')} className="text-white hover:text-red-200">
-                        <X className="h-5 w-5" />
-                    </button>
-                </div>
-            </div>
-        );
+    if (!navigator.geolocation) {
+      setError("Geolocation not supported on this device");
+      return;
     }
 
-    // Tracking active
+    setIsTracking(true);
+    setError("");
+    await requestWakeLock();
+
+    // Interval every 2 seconds
+    gpsTimerRef.current = window.setInterval(() => {
+      // Check if socket is connected before sending
+      if (!socket.connected) {
+        console.warn("[DRIVER] Socket not connected, skipping location update");
+        setError("Socket disconnected. Reconnecting...");
+        socket.connect();
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude, speed, accuracy } = pos.coords;
+
+          // Build full payload
+          const location = {
+            lat: latitude,
+            lng: longitude,
+            speed: speed ?? 0,
+            accuracy: accuracy ?? null,
+            timestamp: new Date().toISOString(),
+          };
+
+          const payload = {
+            vehicleId,
+            location,
+          };
+
+          console.log("[DRIVER] send_location =>", payload);
+          socket.emit("send_location", payload);
+
+          // Update state for UI display
+          setCurrentLocation({ lat: latitude, lng: longitude });
+          setLastUpdate(new Date());
+          setUpdateCount((prev) => prev + 1);
+          setError(""); // Clear any previous errors
+        },
+        (err) => {
+          console.error("[DRIVER] GPS error:", err);
+          setError(`GPS Error: ${err.message}`);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 1000,
+        }
+      );
+    }, 2000);
+  };
+
+  // -------------------------------
+  // 5. Stop tracking
+  // -------------------------------
+  const stopTracking = () => {
+    console.log("[DRIVER] stopTracking");
+    setIsTracking(false);
+
+    if (gpsTimerRef.current !== null) {
+      window.clearInterval(gpsTimerRef.current);
+      gpsTimerRef.current = null;
+    }
+
+    releaseWakeLock();
+  };
+
+  // -------------------------------
+  // 6. UI
+  // -------------------------------
+  if (!isTracking) {
     return (
-        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-green-600 text-white p-4 rounded-lg shadow-lg" style={{ zIndex: 9999 }}>
-            <div className="flex items-center gap-3">
-                <MapPin className="h-6 w-6 animate-pulse" />
-                <div className="flex-1">
-                    <p className="font-semibold flex items-center gap-2">
-                        <span className="inline-block h-2 w-2 bg-green-300 rounded-full animate-pulse"></span>
-                        Location Tracking Active
-                    </p>
-                    <p className="text-xs text-green-100">
-                        Updates: {updateCount} • Last: {lastUpdate?.toLocaleTimeString() || 'Starting...'}
-                    </p>
-                </div>
-            </div>
+      <div className="fixed bottom-4 left-4 right-4 md:left-4 md:right-auto md:w-96 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-2xl shadow-2xl">
+        <div className="flex items-center gap-4">
+          <Navigation className="h-10 w-10 flex-shrink-0" />
+          <div className="flex-1">
+            <h3 className="text-lg font-bold mb-1">Enable Live Tracking</h3>
+            <p className="text-xs text-blue-100 mb-3">
+              Share your real-time location with your fleet owner.
+            </p>
+            {error && (
+              <p className="text-xs bg-black/20 rounded-md px-2 py-1 mb-2">
+                {error}
+              </p>
+            )}
+            <button
+              className="w-full bg-white text-blue-600 px-4 py-2 rounded-xl font-semibold text-sm hover:bg-blue-50"
+              onClick={startTracking}
+            >
+              📍 Start Tracking
+            </button>
+          </div>
         </div>
+      </div>
     );
+  }
+
+  return (
+    <div className={`fixed bottom-4 left-4 right-4 md:left-4 md:right-auto md:w-96 ${isSocketConnected ? 'bg-green-600' : 'bg-yellow-600'
+      } text-white p-4 rounded-2xl shadow-2xl`}>
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <MapPin className={`h-6 w-6 ${isSocketConnected ? 'animate-pulse' : ''}`} />
+          <div className="flex-1">
+            <p className="font-semibold text-sm">
+              Tracking Active {!isSocketConnected && '(Reconnecting...)'}
+            </p>
+            <p className="text-[11px]">
+              Updates: {updateCount} • Last:{" "}
+              {lastUpdate?.toLocaleTimeString() || "Starting..."}
+            </p>
+          </div>
+          <button onClick={stopTracking}>
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Socket Status */}
+        <div className="text-[11px] bg-black/20 rounded-md px-2 py-1">
+          Socket: {isSocketConnected ? '✓ Connected' : '✗ Disconnected'}
+        </div>
+
+        {/* Current Location */}
+        {currentLocation && (
+          <div className="text-[11px] bg-black/20 rounded-md px-2 py-1">
+            📍 {currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="text-[11px] bg-red-500/50 rounded-md px-2 py-1">
+            ⚠️ {error}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

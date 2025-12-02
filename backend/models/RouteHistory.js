@@ -1,13 +1,28 @@
+// models/RouteHistory.js
 const mongoose = require('mongoose');
 
 const routeHistorySchema = new mongoose.Schema({
-    tripId: { type: mongoose.Schema.Types.ObjectId, ref: 'Trip' }, // Optional for ad-hoc tracking
-    vehicleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle', required: true },
-    locations: [{
-        lat: Number,
-        lng: Number,
-        timestamp: { type: Date, default: Date.now }
-    }]
-}, { timestamps: true });
+    vehicleId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Vehicle',
+        required: true
+    },
+    // optional: driverId if you want
+    driverId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Driver'
+    },
+    locations: [
+        {
+            lat: { type: Number, required: true },
+            lng: { type: Number, required: true },
+            timestamp: { type: Date, default: Date.now }
+        }
+    ]
+}, {
+    timestamps: true // createdAt used for "today" filter
+});
+
+routeHistorySchema.index({ vehicleId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('RouteHistory', routeHistorySchema);

@@ -1,10 +1,28 @@
 import React, { useState, useEffect } from "react";
-import { Car, User, Building, Truck, Eye, EyeOff } from "lucide-react";
+import {
+  Car,
+  User,
+  Building,
+  Truck,
+  Eye,
+  EyeOff,
+  Sun,
+  Moon,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function LoginPage() {
-  const { login, register, verifyOTP, resendOTP, sendLoginOTP, verifyLoginOTP, apiLoading } = useAuth();
+  const {
+    login,
+    register,
+    verifyOTP,
+    resendOTP,
+    sendLoginOTP,
+    verifyLoginOTP,
+    apiLoading,
+  } = useAuth();
+
   const [isLogin, setIsLogin] = useState(true);
   const [isOtpLogin, setIsOtpLogin] = useState(false);
 
@@ -19,18 +37,20 @@ export default function LoginPage() {
   const [success, setSuccess] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  // OTP States
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [timer, setTimer] = useState(0);
 
-  // Registration OTP State
   const [awaitingRegistrationOtp, setAwaitingRegistrationOtp] = useState(false);
+
+  const [darkMode, setDarkMode] = useState(false);
+
+  // 3D tilt for login card
+  const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0 });
 
   const validateEmail = (email: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  // Timer countdown effect
   useEffect(() => {
     if (timer <= 0) return;
 
@@ -67,14 +87,12 @@ export default function LoginPage() {
         }
       } else {
         if (awaitingRegistrationOtp) {
-          // Verify OTP for registration
           await verifyOTP(formData.email, otp);
           setSuccess("Email verified! Please login.");
           setAwaitingRegistrationOtp(false);
           setIsLogin(true);
           setOtp("");
         } else {
-          // Register
           await register(
             formData.email,
             formData.password,
@@ -82,8 +100,10 @@ export default function LoginPage() {
             formData.role
           );
           setAwaitingRegistrationOtp(true);
-          setSuccess("Registration successful! Please enter the OTP sent to your email.");
-          setTimer(600); // 10 minutes
+          setSuccess(
+            "Registration successful! Please enter the OTP sent to your email."
+          );
+          setTimer(600);
         }
       }
     } catch (err) {
@@ -97,21 +117,167 @@ export default function LoginPage() {
     { email: "personal@user.com", role: "Personal User", icon: User },
   ];
 
+  const handleCardMouseMove = (
+    e: React.MouseEvent<HTMLDivElement, MouseEvent>
+  ) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const rotateY = ((x - centerX) / centerX) * 10;
+    const rotateX = -((y - centerY) / centerY) * 10;
+
+    setTilt({ rotateX, rotateY });
+  };
+
+  const handleCardMouseLeave = () => {
+    setTilt({ rotateX: 0, rotateY: 0 });
+  };
+
+  const viewportWidth =
+    typeof window !== "undefined" ? window.innerWidth : 1200;
+  const viewportHeight =
+    typeof window !== "undefined" ? window.innerHeight : 800;
+
   return (
-    <div
-      className="min-h-screen flex items-center justify-center px-4"
-      style={{
-        background:
-          "linear-gradient(135deg, #4C1D95, #5B21B6, #6D28D9, #7C3AED)",
-      }}
-    >
-      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-12">
-        {/* LEFT */}
+    <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden transition-colors duration-500">
+      {/* DARK MODE TOGGLE */}
+      <button
+        onClick={() => setDarkMode((prev) => !prev)}
+        className="absolute top-6 right-6 z-20 rounded-full border border-white/40 bg-black/30 backdrop-blur-xl px-3 py-2 flex items-center gap-2 text-xs font-medium text-white hover:bg-black/70 transition"
+      >
+        {darkMode ? (
+          <>
+            <Sun size={14} />
+            Light
+          </>
+        ) : (
+          <>
+            <Moon size={14} />
+            Dark
+          </>
+        )}
+      </button>
+
+      {/* ANIMATED GRADIENT BACKGROUND */}
+      <div
+        className={`absolute inset-0 animate-gradient-xy ${
+          darkMode
+            ? "bg-gradient-to-br from-slate-950 via-purple-950 to-black"
+            : "bg-gradient-to-br from-[#2E026D] via-[#6A00F5] to-[#C100FF]"
+        }`}
+      ></div>
+
+      {/* SVG WAVES BEHIND EVERYTHING */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-64 opacity-45">
+        <svg
+          className="absolute bottom-0 w-[200%] h-full animate-wave-slow"
+          viewBox="0 0 1440 320"
+          preserveAspectRatio="none"
+        >
+          <path
+            fill="url(#waveGradient1)"
+            d="M0,256L48,245.3C96,235,192,213,288,202.7C384,192,480,192,576,176C672,160,768,128,864,133.3C960,139,1056,181,1152,197.3C1248,213,1344,203,1392,197.3L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
+          />
+          <defs>
+            <linearGradient id="waveGradient1" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#ff00ff" />
+              <stop offset="50%" stopColor="#00ffff" />
+              <stop offset="100%" stopColor="#ffea00" />
+            </linearGradient>
+          </defs>
+        </svg>
+
+        <svg
+          className="absolute bottom-0 w-[200%] h-full animate-wave-fast opacity-70"
+          viewBox="0 0 1440 320"
+          preserveAspectRatio="none"
+        >
+          <path
+            fill="url(#waveGradient2)"
+            d="M0,160L60,170.7C120,181,240,203,360,213.3C480,224,600,224,720,213.3C840,203,960,181,1080,170.7C1200,160,1320,160,1380,160L1440,160L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"
+          />
+          <defs>
+            <linearGradient id="waveGradient2" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#00ffff" />
+              <stop offset="50%" stopColor="#ff00ff" />
+              <stop offset="100%" stopColor="#ffea00" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      {/* FLOATING PARTICLES + VEHICLE ICONS */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {/* Small particles */}
+        {[...Array(20)].map((_, i) => (
+          <motion.span
+            key={"particle-" + i}
+            className="absolute w-2 h-2 bg-white/25 rounded-full"
+            initial={{
+              x: Math.random() * viewportWidth,
+              y: Math.random() * viewportHeight,
+              opacity: 0.15 + Math.random() * 0.25,
+              scale: 0.4 + Math.random() * 0.8,
+            }}
+            animate={{
+              y: Math.random() * viewportHeight - 200,
+              x: Math.random() * viewportWidth - 200,
+              opacity: 0.2 + Math.random() * 0.3,
+              scale: 0.6 + Math.random() * 0.6,
+            }}
+            transition={{
+              duration: 10 + Math.random() * 10,
+              repeat: Infinity,
+              repeatType: "reverse",
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+
+        {/* Very subtle vehicle-related icons */}
+        {["🚗", "🚚", "🛠️", "🛰️", "🚦", "⛽"].map((icon, i) => (
+          <motion.div
+            key={"vehicle-icon-" + i}
+            className="absolute select-none"
+            style={{
+              fontSize: `${18 + Math.random() * 10}px`,
+              filter: "drop-shadow(0 0 4px rgba(255,255,255,0.4))",
+            }}
+            initial={{
+              x: Math.random() * viewportWidth,
+              y: Math.random() * viewportHeight,
+              opacity: 0.08,
+              scale: 0.7,
+            }}
+            animate={{
+              y: Math.random() * viewportHeight - 150,
+              x: Math.random() * viewportWidth - 200,
+              opacity: 0.16,
+              scale: 1,
+              rotate: Math.random() * 20 - 10,
+            }}
+            transition={{
+              duration: 16 + Math.random() * 12,
+              repeat: Infinity,
+              repeatType: "reverse",
+              ease: "easeInOut",
+            }}
+          >
+            {icon}
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-12 relative z-10">
+        {/* LEFT CARD */}
         <motion.div
           initial={{ opacity: 0, x: -40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
-          className="bg-white/20 backdrop-blur-xl shadow-2xl rounded-3xl p-10 border border-white/30"
+          className="bg-white/10 backdrop-blur-xl shadow-2xl rounded-3xl p-10 border border-white/20 hover:bg-white/20 transition-all"
         >
           <div className="flex items-center space-x-4 mb-8">
             <div className="bg-white/20 p-4 rounded-2xl shadow-lg backdrop-blur-lg">
@@ -126,10 +292,10 @@ export default function LoginPage() {
             Smart Fleet & Vehicle Management
           </h2>
           <p className="text-white/80 mb-8 text-lg">
-            Manage vehicles with tracking, analytics, reminders and more.
+            Manage vehicles with tracking, analytics, reminders, and more.
           </p>
 
-          <div className="rounded-2xl bg-white/10 backdrop-blur-xl border p-6">
+          <div className="rounded-2xl bg-white/10 backdrop-blur-xl border border-white/30 p-6">
             <h3 className="text-white text-lg font-semibold mb-4">
               Try Demo Accounts
             </h3>
@@ -140,7 +306,7 @@ export default function LoginPage() {
                 return (
                   <motion.button
                     key={i}
-                    whileHover={{ scale: 1.03 }}
+                    whileHover={{ scale: 1.03, x: 4 }}
                     whileTap={{ scale: 0.97 }}
                     onClick={() => {
                       setFormData({
@@ -150,7 +316,7 @@ export default function LoginPage() {
                       });
                       setIsLogin(true);
                     }}
-                    className="w-full flex items-center gap-4 p-4 rounded-xl bg-white/20 hover:bg-white/30 text-white border"
+                    className="w-full flex items-center gap-4 p-4 rounded-xl bg-white/20 hover:bg-white/30 text-white border border-white/40"
                   >
                     <Icon className="h-6 w-6 text-yellow-200" />
                     <div>
@@ -164,238 +330,334 @@ export default function LoginPage() {
           </div>
         </motion.div>
 
-        {/* RIGHT */}
+        {/* RIGHT CARD WITH NEON GLOW + 3D PARALLAX + SLIDE-IN */}
         <AnimatePresence mode="wait">
           <motion.div
             key={isLogin ? "login" : "signup"}
-            initial={{ rotateY: -90, opacity: 0 }}
-            animate={{ rotateY: 0, opacity: 1 }}
-            exit={{ rotateY: 90, opacity: 0 }}
-            transition={{ duration: 0.6 }}
-            className="bg-white/90 backdrop-blur-xl shadow-2xl rounded-3xl p-10 border"
+            initial={{ opacity: 0, y: 80, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 40, scale: 0.96 }}
+            transition={{
+              type: "spring",
+              stiffness: 120,
+              damping: 14,
+            }}
+            className="relative"
           >
-            <div className="text-center mb-8">
-              <h3 className="text-3xl font-bold text-gray-800">
-                {isLogin ? "Welcome Back" : "Create Account"}
-              </h3>
-              <p className="text-gray-500">
-                {isLogin ? "Sign in to continue" : "Create a new account"}
-              </p>
-            </div>
-
-            {error && (
-              <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg text-red-700">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-lg text-green-700">
-                {success}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* NAME */}
-              {!isLogin && !awaitingRegistrationOtp && (
-                <div>
-                  <label className="block text-gray-700 mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className="w-full px-4 py-3 rounded-xl border"
-                    placeholder="John Doe"
-                  />
+            <div
+              className="neon-border rounded-3xl p-[2px]"
+              onMouseMove={handleCardMouseMove}
+              onMouseLeave={handleCardMouseLeave}
+            >
+              <motion.div
+                style={{
+                  rotateX: tilt.rotateX,
+                  rotateY: tilt.rotateY,
+                  transformPerspective: 1200,
+                }}
+                className="bg-white/95 backdrop-blur-xl shadow-2xl rounded-3xl p-10 border border-white/40 hover:shadow-[0_0_40px_rgba(255,255,255,0.35)] transition"
+              >
+                <div className="text-center mb-8">
+                  <h3 className="text-3xl font-bold text-gray-800">
+                    {isLogin ? "Welcome Back" : "Create Account"}
+                  </h3>
+                  <p className="text-gray-500">
+                    {isLogin ? "Sign in to continue" : "Create a new account"}
+                  </p>
                 </div>
-              )}
 
-              {/* EMAIL */}
-              {!awaitingRegistrationOtp && (!isLogin || !isOtpLogin || !otpSent) && (
-                <div>
-                  <label className="block text-gray-700 mb-1">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => {
-                      setFormData({ ...formData, email: e.target.value });
-                    }}
-                    className="w-full px-4 py-3 rounded-xl border"
-                    placeholder="you@example.com"
-                  />
-                </div>
-              )}
+                {error && (
+                  <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg text-red-700">
+                    {error}
+                  </div>
+                )}
 
-              {/* OTP INPUT */}
-              {(awaitingRegistrationOtp || (isLogin && isOtpLogin && otpSent)) && (
-                <div>
-                  <label className="block text-gray-700 mb-1">Enter OTP sent to email</label>
-                  <div className="space-y-3">
-                    <input
-                      type="text"
-                      maxLength={6}
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border text-center text-2xl tracking-widest"
-                      placeholder="000000"
-                      autoFocus
-                    />
+                {success && (
+                  <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-lg text-green-700">
+                    {success}
+                  </div>
+                )}
 
-                    <div className="flex justify-between items-center text-sm">
-                      <p className="text-gray-500">
-                        OTP expires in {Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}
-                      </p>
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  {/* NAME */}
+                  {!isLogin && !awaitingRegistrationOtp && (
+                    <div>
+                      <label className="block text-gray-700 mb-1">
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.name}
+                        onChange={(e) =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
+                        className="w-full px-4 py-3 rounded-xl border"
+                        placeholder="John Doe"
+                      />
+                    </div>
+                  )}
+
+                  {/* EMAIL */}
+                  {!awaitingRegistrationOtp &&
+                    (!isLogin || !isOtpLogin || !otpSent) && (
+                      <div>
+                        <label className="block text-gray-700 mb-1">
+                          Email Address
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          value={formData.email}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              email: e.target.value,
+                            })
+                          }
+                          className="w-full px-4 py-3 rounded-xl border"
+                          placeholder="you@example.com"
+                        />
+                      </div>
+                    )}
+
+                  {/* OTP INPUT */}
+                  {(awaitingRegistrationOtp ||
+                    (isLogin && isOtpLogin && otpSent)) && (
+                    <div>
+                      <label className="block text-gray-700 mb-1">
+                        Enter OTP sent to email
+                      </label>
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          maxLength={6}
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl border text-center text-2xl tracking-widest"
+                          placeholder="000000"
+                          autoFocus
+                        />
+
+                        <div className="flex justify-between items-center text-sm">
+                          <p className="text-gray-500">
+                            OTP expires in {Math.floor(timer / 60)}:
+                            {(timer % 60).toString().padStart(2, "0")}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                if (isLogin && isOtpLogin) {
+                                  await sendLoginOTP(formData.email);
+                                } else {
+                                  await resendOTP(formData.email);
+                                }
+                                setTimer(600);
+                                setSuccess("OTP resent successfully!");
+                              } catch (err) {
+                                setError("Failed to resend OTP");
+                              }
+                            }}
+                            className="text-purple-600 hover:text-purple-800 font-semibold hover:underline"
+                          >
+                            Resend OTP
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PASSWORD */}
+                  {!awaitingRegistrationOtp && !isOtpLogin && (
+                    <div>
+                      <label className="block text-gray-700 mb-1">
+                        Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          required
+                          value={formData.password}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              password: e.target.value,
+                            })
+                          }
+                          className="w-full px-4 py-3 rounded-xl border"
+                          placeholder="••••••••"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-4 top-3 text-gray-600"
+                        >
+                          {showPassword ? (
+                            <EyeOff size={20} />
+                          ) : (
+                            <Eye size={20} />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ROLE */}
+                  {!isLogin && !awaitingRegistrationOtp && (
+                    <div>
+                      <label className="block text-gray-700 mb-1">
+                        Account Type
+                      </label>
+                      <select
+                        value={formData.role}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            role: e.target.value as any,
+                          })
+                        }
+                        className="w-full px-4 py-3 rounded-xl border"
+                      >
+                        <option value="personal">Personal User</option>
+                        <option value="fleet_owner">Fleet Owner</option>
+                        <option value="driver">Driver</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {/* SUBMIT BUTTON */}
+                  <button
+                    type="submit"
+                    disabled={apiLoading}
+                    className="w-full py-3 bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 
+                               text-white rounded-xl font-semibold shadow-lg hover:opacity-90 
+                               transition-all disabled:opacity-50"
+                  >
+                    {apiLoading
+                      ? "Please wait..."
+                      : awaitingRegistrationOtp
+                      ? "Verify OTP"
+                      : isLogin
+                      ? isOtpLogin
+                        ? otpSent
+                          ? "Verify OTP"
+                          : "Send OTP"
+                        : "Sign In"
+                      : "Create Account"}
+                  </button>
+
+                  {/* OTP LOGIN TOGGLE */}
+                  {isLogin && !otpSent && (
+                    <div className="text-center">
                       <button
                         type="button"
-                        onClick={async () => {
-                          try {
-                            if (isLogin && isOtpLogin) {
-                              await sendLoginOTP(formData.email);
-                            } else {
-                              await resendOTP(formData.email);
-                            }
-                            setTimer(600);
-                            setSuccess("OTP resent successfully!");
-                          } catch (err) {
-                            setError("Failed to resend OTP");
-                          }
+                        onClick={() => {
+                          setIsOtpLogin(!isOtpLogin);
+                          setError("");
+                          setSuccess("");
                         }}
-                        className="text-purple-600 hover:text-purple-800 font-semibold hover:underline"
+                        className="text-sm text-purple-600 hover:text-purple-800 font-medium hover:underline"
                       >
-                        Resend OTP
+                        {isOtpLogin ? "Login with Password" : "Login with OTP"}
                       </button>
                     </div>
-                  </div>
-                </div>
-              )}
+                  )}
+                </form>
 
-              {/* PASSWORD */}
-              {!awaitingRegistrationOtp && !isOtpLogin && (
-                <div>
-                  <label className="block text-gray-700 mb-1">Password</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={formData.password}
-                      onChange={(e) =>
-                        setFormData({ ...formData, password: e.target.value })
-                      }
-                      className="w-full px-4 py-3 rounded-xl border"
-                      placeholder="••••••••"
-                    />
-
+                {/* SWITCH LOGIN / SIGNUP */}
+                {!awaitingRegistrationOtp && (
+                  <div className="mt-6 text-center">
                     <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-3 text-gray-600"
+                      onClick={() => {
+                        setIsLogin(!isLogin);
+                        setIsOtpLogin(false);
+                        setOtp("");
+                        setOtpSent(false);
+                        setError("");
+                        setSuccess("");
+                      }}
+                      className="text-purple-700 font-semibold hover:underline"
                     >
-                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                      {isLogin
+                        ? "Don't have an account? Sign up"
+                        : "Already registered? Sign in"}
                     </button>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* ROLE */}
-              {!isLogin && !awaitingRegistrationOtp && (
-                <div>
-                  <label className="block text-gray-700 mb-1">
-                    Account Type
-                  </label>
-                  <select
-                    value={formData.role}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        role: e.target.value as any,
-                      })
-                    }
-                    className="w-full px-4 py-3 rounded-xl border"
-                  >
-                    <option value="personal">Personal User</option>
-                    <option value="fleet_owner">Fleet Owner</option>
-                    <option value="driver">Driver</option>
-                  </select>
-                </div>
-              )}
-
-              {/* BUTTON */}
-              <button
-                type="submit"
-                disabled={apiLoading}
-                className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 
-                           text-white rounded-xl font-semibold shadow-lg hover:opacity-90 
-                           transition-all disabled:opacity-50"
-              >
-                {apiLoading
-                  ? "Please wait..."
-                  : awaitingRegistrationOtp
-                    ? "Verify OTP"
-                    : isLogin
-                      ? (isOtpLogin
-                        ? (otpSent ? "Verify OTP" : "Send OTP")
-                        : "Sign In")
-                      : "Create Account"}
-              </button>
-
-              {/* OTP LOGIN TOGGLE */}
-              {isLogin && !otpSent && (
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsOtpLogin(!isOtpLogin);
-                      setError("");
-                      setSuccess("");
-                    }}
-                    className="text-sm text-purple-600 hover:text-purple-800 font-medium hover:underline"
-                  >
-                    {isOtpLogin ? "Login with Password" : "Login with OTP"}
-                  </button>
-                </div>
-              )}
-            </form>
-
-            {/* SWITCH */}
-            {!awaitingRegistrationOtp && (
-              <div className="mt-6 text-center">
-                <button
-                  onClick={() => {
-                    setIsLogin(!isLogin);
-                    setIsOtpLogin(false);
-                    setOtp("");
-                    setOtpSent(false);
-                    setError("");
-                    setSuccess("");
-                  }}
-                  className="text-purple-700 font-semibold hover:underline"
-                >
-                  {isLogin
-                    ? "Don't have an account? Sign up"
-                    : "Already registered? Sign in"}
-                </button>
-              </div>
-            )}
-
-            {awaitingRegistrationOtp && (
-              <div className="mt-6 text-center">
-                <button
-                  onClick={() => setAwaitingRegistrationOtp(false)}
-                  className="text-gray-500 hover:text-gray-700 text-sm"
-                >
-                  Back to Registration
-                </button>
-              </div>
-            )}
+                {awaitingRegistrationOtp && (
+                  <div className="mt-6 text-center">
+                    <button
+                      onClick={() => setAwaitingRegistrationOtp(false)}
+                      className="text-gray-500 hover:text-gray-700 text-sm"
+                    >
+                      Back to Registration
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            </div>
           </motion.div>
         </AnimatePresence>
-      </div>
+</div>
+
+{/* WATERMARK */}
+<div className="absolute bottom-6 w-full flex justify-center pointer-events-none z-20">
+  <p className="text-white/50 text-xs tracking-widest select-none">
+    MADE BY CARS
+  </p>
+</div>
+
+      {/* EXTRA STYLES */}
+      <style>{`
+        .animate-gradient-xy {
+          background-size: 400% 400%;
+          animation: gradientMove 12s ease infinite;
+        }
+
+        @keyframes gradientMove {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+
+        .neon-border {
+          background: linear-gradient(
+            120deg,
+            #ff00ff,
+            #00ffff,
+            #ffea00,
+            #ff00ff
+          );
+          background-size: 300% 300%;
+          animation: neonGlow 6s linear infinite;
+          box-shadow:
+            0 0 15px rgba(255, 0, 255, 0.45),
+            0 0 22px rgba(0, 255, 255, 0.35),
+            0 0 30px rgba(255, 234, 0, 0.25);
+        }
+
+        @keyframes neonGlow {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+
+        .animate-wave-slow {
+          animation: waveMove 18s linear infinite;
+        }
+
+        .animate-wave-fast {
+          animation: waveMove 12s linear infinite reverse;
+        }
+
+        @keyframes waveMove {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
     </div>
   );
 }

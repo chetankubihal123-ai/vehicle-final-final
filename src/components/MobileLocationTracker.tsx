@@ -98,7 +98,7 @@ export const MobileLocationTracker = () => {
             {
                 enableHighAccuracy: true, // Use GPS for best accuracy
                 timeout: 10000, // 10 seconds timeout
-                maximumAge: 0 // Don't use cached location
+                maximumAge: 1000 // Don't use cached location
             }
         );
 

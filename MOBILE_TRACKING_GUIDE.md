@@ -178,7 +178,7 @@ export const MobileLocationTracker = () => {
       {
         enableHighAccuracy: true, // Use GPS
         timeout: 5000,
-        maximumAge: 0
+        maximumAge: 1000
       }
     );
 

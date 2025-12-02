@@ -1,287 +1,416 @@
-import { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { Navigation, MapPin, Gauge, Clock, Radio } from 'lucide-react';
-import { io, Socket } from 'socket.io-client';
-import axios from 'axios';
-import { API_URL } from '../config';
+// src/components/VehicleTracker.tsx
+import { useEffect, useState, useRef } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Polyline,
+  useMap,
+} from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { Navigation, MapPin, Gauge, Clock, Radio } from "lucide-react";
+import axios from "axios";
+import { API_URL } from "../config";
+import { socket } from "../socket";
 
-// Fix for default marker icons in React-Leaflet
+// Fix default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
 interface VehicleLocation {
-    lat: number;
-    lng: number;
-    speed: number;
-    timestamp: Date;
+  lat: number;
+  lng: number;
+  speed: number;
+  timestamp: Date;
 }
 
-// Component to auto-center map on vehicle
 function MapController({ center }: { center: [number, number] }) {
-    const map = useMap();
-    useEffect(() => {
-        map.setView(center, 15);
-    }, [center, map]);
-    return null;
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, 16);
+  }, [center, map]);
+  return null;
 }
 
-interface VehicleTrackerProps {
-    vehicleId: string;
-    vehicleName: string;
+interface Props {
+  vehicleId: string;
+  vehicleName: string;
 }
 
-export default function VehicleTracker({ vehicleId, vehicleName }: VehicleTrackerProps) {
-    const [currentLocation, setCurrentLocation] = useState<VehicleLocation>({
-        lat: 18.5204, // Default: Pune, India
-        lng: 73.8567,
-        speed: 0,
-        timestamp: new Date(),
-    });
-    const [locationHistory, setLocationHistory] = useState<[number, number][]>([]);
-    const [isConnected, setIsConnected] = useState(false);
-    const socketRef = useRef<Socket | null>(null);
+export default function VehicleTracker({ vehicleId, vehicleName }: Props) {
+  // Start with neutral default; will be overwritten as soon as we have real data
+  const [currentLocation, setCurrentLocation] = useState<VehicleLocation>({
+    lat: 12.9716,
+    lng: 77.5946,
+    speed: 0,
+    timestamp: new Date(),
+  });
 
-    // Initialize Socket.io
-    useEffect(() => {
-        // Dynamically connect to the backend on the same IP as the frontend
-        const socketUrl = `http://${window.location.hostname}:5000`;
-        console.log('Connecting to socket at:', socketUrl);
+  const [locationHistory, setLocationHistory] = useState<[number, number][]>(
+    []
+  );
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const [isGPSStale, setIsGPSStale] = useState(true);
+  const [justReceivedUpdate, setJustReceivedUpdate] = useState(false);
 
-        socketRef.current = io(socketUrl);
+  const socketRef = useRef<typeof socket | null>(null);
+  const STALE_MS = 30_000; // 30 seconds
 
-        socketRef.current.on('connect', () => {
-            console.log('Socket connected');
-            setIsConnected(true);
-            socketRef.current?.emit('join_vehicle', vehicleId);
-        });
+  // --------------------------------
+  // 1. SOCKET: live updates
+  // --------------------------------
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.warn("[OWNER] No token; cannot connect socket");
+      return;
+    }
 
-        socketRef.current.on('disconnect', () => {
-            console.log('Socket disconnected');
-            setIsConnected(false);
-        });
+    socket.auth = { token };
+    if (!socket.connected) {
+      socket.connect();
+    }
+    socketRef.current = socket;
 
-        // Listen for updates from the REST API (DriverLocationService)
-        socketRef.current.on('location-update', (data: any) => {
-            if (data.vehicleId === vehicleId) {
-                console.log('📍 Received location update:', data);
-                const newLoc = {
-                    lat: data.latitude,
-                    lng: data.longitude,
-                    speed: data.speed || 0,
-                    timestamp: new Date(data.timestamp),
-                };
-                setCurrentLocation(newLoc);
-                setLocationHistory(prev => [...prev, [data.latitude, data.longitude] as [number, number]].slice(-100));
-            }
-        });
+    const handleConnect = () => {
+      console.log("[OWNER] socket connected:", socket.id);
+      setIsSocketConnected(true);
+      console.log("[OWNER] join_vehicle =>", vehicleId);
+      socket.emit("join_vehicle", vehicleId);
+    };
 
-        // Listen for updates from direct socket events (if any)
-        socketRef.current.on('receive_location', (data: any) => {
-            if (data.vehicleId === vehicleId) {
-                console.log('📍 Received direct socket location:', data);
-                const newLoc = {
-                    lat: data.location.lat,
-                    lng: data.location.lng,
-                    speed: data.location.speed || 0,
-                    timestamp: new Date(data.location.timestamp),
-                };
-                setCurrentLocation(newLoc);
-                setLocationHistory(prev => [...prev, [data.location.lat, data.location.lng] as [number, number]].slice(-100));
-            }
-        });
+    const handleDisconnect = () => {
+      console.log("[OWNER] socket disconnected");
+      setIsSocketConnected(false);
+    };
 
-        return () => {
-            socketRef.current?.disconnect();
-        };
-    }, [vehicleId]);
+    const handleConnectError = (err: any) => {
+      console.error("[OWNER] socket connect_error:", err.message);
+      setIsSocketConnected(false);
+    };
 
-    // Fetch initial vehicle data from API
-    useEffect(() => {
-        const fetchVehicleData = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                const response = await axios.get(`${API_URL}/api/vehicles/${vehicleId}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                const vehicle = response.data;
+    const handleReceiveLocation = (data: any) => {
+      console.log("[OWNER] receive_location »", data);
+      if (!data || data.vehicleId !== vehicleId || !data.location) return;
 
-                if (vehicle.currentLocation && vehicle.currentLocation.coordinates) {
-                    const lng = vehicle.currentLocation.coordinates[0];
-                    const lat = vehicle.currentLocation.coordinates[1];
+      const { lat, lng, speed, timestamp } = data.location;
 
-                    // Only use coordinates if they're valid (not 0,0)
-                    if (lat !== 0 && lng !== 0) {
-                        setCurrentLocation({
-                            lat: lat,
-                            lng: lng,
-                            speed: vehicle.currentLocation.speed || 0,
-                            timestamp: new Date(vehicle.currentLocation.timestamp || new Date()),
-                        });
-                    }
-                }
+      // Ignore invalid payloads
+      if (
+        typeof lat !== "number" ||
+        typeof lng !== "number" ||
+        Number.isNaN(lat) ||
+        Number.isNaN(lng)
+      ) {
+        console.warn("[OWNER] received invalid coordinates, ignoring", data);
+        return;
+      }
 
-                if (vehicle.locationHistory && vehicle.locationHistory.length > 0) {
-                    const history = vehicle.locationHistory
-                        .filter((pt: any) => pt.coordinates[1] !== 0 && pt.coordinates[0] !== 0)
-                        .map((pt: any) => [pt.coordinates[1], pt.coordinates[0]] as [number, number]);
+      const ts = timestamp ? new Date(timestamp) : new Date();
 
-                    if (history.length > 0) {
-                        setLocationHistory(history);
-                    }
-                }
-            } catch (err) {
-                console.error('Error fetching vehicle data:', err);
-            }
-        };
+      const loc: VehicleLocation = {
+        lat,
+        lng,
+        speed: typeof speed === "number" ? speed : 0,
+        timestamp: ts,
+      };
 
-        if (vehicleId) {
-            fetchVehicleData();
+      console.log("[OWNER] ✓ Valid location update:", loc);
+
+      setCurrentLocation(loc);
+      setLocationHistory((prev) =>
+        [...prev, [loc.lat, loc.lng] as [number, number]].slice(-300)
+      );
+
+      const diff = Date.now() - ts.getTime();
+      setIsGPSStale(diff > STALE_MS);
+
+      // Show visual feedback for new update
+      setJustReceivedUpdate(true);
+      setTimeout(() => setJustReceivedUpdate(false), 2000);
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
+    socket.on("receive_location", handleReceiveLocation);
+
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
+      socket.off("receive_location", handleReceiveLocation);
+      socket.disconnect();
+    };
+  }, [vehicleId]);
+
+  // --------------------------------
+  // 1.5 PERIODIC STALENESS CHECK
+  // --------------------------------
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (currentLocation.timestamp) {
+        const diff = Date.now() - currentLocation.timestamp.getTime();
+        setIsGPSStale(diff > STALE_MS);
+      }
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [currentLocation.timestamp, STALE_MS]);
+
+  // --------------------------------
+  // 2. INITIAL LOAD (REST)
+  // --------------------------------
+  useEffect(() => {
+    const loadInitial = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.warn("[OWNER] No token; cannot load initial location");
+          return;
         }
-    }, [vehicleId]);
 
-    // Initialize tracking history with current location if empty
-    useEffect(() => {
-        if (locationHistory.length === 0 && currentLocation.lat !== 0 && currentLocation.lng !== 0) {
-            setLocationHistory([[currentLocation.lat, currentLocation.lng]]);
+        const headers = { Authorization: `Bearer ${token}` };
+
+        // Last live location
+        try {
+          const liveRes = await axios.get(
+            `${API_URL}/api/location/live/${vehicleId}`,
+            { headers }
+          );
+          console.log("[OWNER] /live response:", liveRes.data);
+
+          if (liveRes.data) {
+            const { lat, lng, speed, timestamp } = liveRes.data;
+
+            if (
+              typeof lat === "number" &&
+              typeof lng === "number" &&
+              !Number.isNaN(lat) &&
+              !Number.isNaN(lng)
+            ) {
+              const ts = timestamp ? new Date(timestamp) : new Date();
+
+              setCurrentLocation({
+                lat,
+                lng,
+                speed: typeof speed === "number" ? speed : 0,
+                timestamp: ts,
+              });
+
+              const diff = Date.now() - ts.getTime();
+              setIsGPSStale(diff > STALE_MS);
+            }
+          }
+        } catch (e) {
+          console.warn("[OWNER] No live location yet", e);
         }
-    }, [currentLocation]);
 
-    const customIcon = new L.Icon({
-        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41],
-    });
+        // Today’s route history
+        try {
+          const historyRes = await axios.get(
+            `${API_URL}/api/location/history/${vehicleId}`,
+            { headers }
+          );
+          console.log("[OWNER] /history response:", historyRes.data);
 
-    return (
-        <div className="space-y-4">
-            {/* Status Indicator */}
-            <div className={`border rounded-lg p-3 flex items-center justify-between ${isConnected ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                <div className="flex items-center gap-2">
-                    <Radio className={`h-5 w-5 ${isConnected ? 'text-green-600 animate-pulse' : 'text-red-600'}`} />
-                    <div>
-                        <p className={`text-sm font-medium ${isConnected ? 'text-green-800' : 'text-red-800'}`}>
-                            {isConnected ? 'Live Connection Active' : 'Connecting to Vehicle...'}
-                        </p>
-                        <p className="text-xs text-gray-600">
-                            Viewing real-time location for {vehicleName}
-                        </p>
-                    </div>
-                </div>
-            </div>
+          if (historyRes.data?.locations?.length) {
+            const pts: [number, number][] = historyRes.data.locations
+              .filter(
+                (p: any) =>
+                  typeof p.lat === "number" &&
+                  typeof p.lng === "number" &&
+                  !Number.isNaN(p.lat) &&
+                  !Number.isNaN(p.lng)
+              )
+              .map((p: any) => [p.lat, p.lng] as [number, number]);
 
-            {/* Vehicle Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-500 rounded-lg">
-                            <MapPin className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Current Location</p>
-                            <p className="font-semibold text-gray-900">
-                                {currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}
-                            </p>
-                        </div>
-                    </div>
-                </div>
+            if (pts.length) {
+              setLocationHistory(pts);
+            }
+          }
+        } catch (e) {
+          console.warn("[OWNER] No route history yet", e);
+        }
+      } catch (err) {
+        console.error("[OWNER] initial load error:", err);
+      }
+    };
 
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-500 rounded-lg">
-                            <Gauge className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Current Speed</p>
-                            <p className="font-semibold text-gray-900">{currentLocation.speed} km/h</p>
-                        </div>
-                    </div>
-                </div>
+    loadInitial();
+  }, [vehicleId]);
 
-                <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-500 rounded-lg">
-                            <Clock className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Last Update</p>
-                            <p className="font-semibold text-gray-900">
-                                {currentLocation.timestamp.toLocaleTimeString()}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  const customIcon = new L.Icon({
+    iconUrl:
+      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+    shadowUrl:
+      "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+  });
 
-            {/* Map */}
-            <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-                <div className="p-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Navigation className="h-5 w-5" />
-                            <h3 className="font-semibold">Live Map View</h3>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className={`h-2 w-2 rounded-full animate-pulse ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}></div>
-                            <span className="text-sm">{isConnected ? 'Online' : 'Offline'}</span>
-                        </div>
-                    </div>
-                </div>
+  const driverOnline = !isGPSStale;
 
-                <div style={{ height: '500px', width: '100%' }}>
-                    <MapContainer
-                        center={[currentLocation.lat, currentLocation.lng]}
-                        zoom={15}
-                        style={{ height: '100%', width: '100%' }}
-                        scrollWheelZoom={true}
-                    >
-                        <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
-
-                        <MapController center={[currentLocation.lat, currentLocation.lng]} />
-
-                        {/* Vehicle Marker */}
-                        <Marker position={[currentLocation.lat, currentLocation.lng]} icon={customIcon}>
-                            <Popup>
-                                <div className="text-center">
-                                    <p className="font-semibold">{vehicleName}</p>
-                                    <p className="text-sm text-gray-600">Speed: {currentLocation.speed} km/h</p>
-                                    <p className="text-xs text-gray-500">
-                                        {currentLocation.timestamp.toLocaleTimeString()}
-                                    </p>
-                                </div>
-                            </Popup>
-                        </Marker>
-
-                        {/* Route History */}
-                        {locationHistory.length > 1 && (
-                            <Polyline
-                                positions={locationHistory}
-                                color="#7c3aed"
-                                weight={3}
-                                opacity={0.7}
-                            />
-                        )}
-                    </MapContainer>
-                </div>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800 flex items-center gap-2">
-                    <Radio className="h-4 w-4" />
-                    Waiting for driver to share location...
-                </p>
-            </div>
+  return (
+    <div className="space-y-4">
+      {/* STATUS BAR */}
+      <div
+        className={`border rounded-lg p-3 flex items-center justify-between ${driverOnline
+          ? "bg-green-50 border-green-200"
+          : "bg-red-50 border-red-200"
+          }`}
+      >
+        <div className="flex items-center gap-2">
+          <Radio
+            className={`h-5 w-5 ${driverOnline ? "text-green-600 animate-pulse" : "text-red-600"
+              }`}
+          />
+          <div>
+            <p
+              className={`text-sm font-medium ${driverOnline ? "text-green-800" : "text-red-800"
+                }`}
+            >
+              {driverOnline ? "Driver Online" : "Driver Offline"}
+            </p>
+            <p className="text-xs text-gray-600">
+              Socket: {isSocketConnected ? "Connected" : "Disconnected"}
+            </p>
+          </div>
         </div>
-    );
+
+        {/* New Update Indicator */}
+        {justReceivedUpdate && (
+          <div className="flex items-center gap-2 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium animate-pulse">
+            <span className="h-2 w-2 bg-white rounded-full"></span>
+            Location Updated
+          </div>
+        )}
+      </div>
+
+      {/* STATS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard
+          icon={<MapPin className="h-5 w-5 text-green-700" />}
+          title="Location"
+          value={`${currentLocation.lat.toFixed(
+            6
+          )}, ${currentLocation.lng.toFixed(6)}`}
+          color="green"
+        />
+        <StatCard
+          icon={<Gauge className="h-5 w-5 text-blue-700" />}
+          title="Speed"
+          value={`${currentLocation.speed.toFixed(1)} km/h`}
+          color="blue"
+        />
+        <StatCard
+          icon={<Clock className="h-5 w-5 text-purple-700" />}
+          title="Last Update"
+          value={currentLocation.timestamp.toLocaleTimeString()}
+          color="purple"
+        />
+      </div>
+
+      {/* MAP */}
+      <div className="border rounded-lg overflow-hidden">
+        <div className="p-3 bg-indigo-600 text-white flex items-center gap-2">
+          <Navigation className="h-5 w-5" />
+          <span>Live Map</span>
+        </div>
+
+        <div style={{ height: 500 }}>
+          <MapContainer
+            center={[currentLocation.lat, currentLocation.lng]}
+            zoom={16}
+            scrollWheelZoom
+            style={{ height: "100%", width: "100%" }}
+          >
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+
+            <MapController
+              center={[currentLocation.lat, currentLocation.lng]}
+            />
+
+            <Marker
+              position={[currentLocation.lat, currentLocation.lng]}
+              icon={customIcon}
+            >
+              <Popup>
+                <b>{vehicleName}</b>
+                <br />
+                Speed: {currentLocation.speed.toFixed(1)} km/h
+                <br />
+                {currentLocation.timestamp.toLocaleTimeString()}
+              </Popup>
+            </Marker>
+
+            {locationHistory.length > 1 && (
+              <Polyline
+                positions={locationHistory}
+                color="#7c3aed"
+                weight={4}
+                opacity={0.8}
+              />
+            )}
+          </MapContainer>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  icon,
+  title,
+  value,
+  color,
+}: {
+  icon: JSX.Element;
+  title: string;
+  value: string;
+  color: "green" | "blue" | "purple";
+}) {
+  const colors: Record<
+    string,
+    { bg: string; border: string; pill: string }
+  > = {
+    green: {
+      bg: "bg-green-50",
+      border: "border-green-200",
+      pill: "bg-green-500",
+    },
+    blue: {
+      bg: "bg-blue-50",
+      border: "border-blue-200",
+      pill: "bg-blue-500",
+    },
+    purple: {
+      bg: "bg-purple-50",
+      border: "border-purple-200",
+      pill: "bg-purple-500",
+    },
+  };
+
+  const c = colors[color];
+
+  return (
+    <div className={`p-4 rounded-lg border ${c.bg} ${c.border}`}>
+      <div className="flex items-center gap-3">
+        <div className={`p-2 rounded-lg ${c.pill}`}>{icon}</div>
+        <div>
+          <p className="text-sm text-gray-600">{title}</p>
+          <p className="font-semibold text-gray-900">{value}</p>
+        </div>
+      </div>
+    </div>
+  );
 }

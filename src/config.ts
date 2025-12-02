@@ -1,8 +1,9 @@
-// API Configuration
-// Using local IP address for mobile testing
-//export const API_URL = "http://localhost:5000/api";
-export const API_URL = import.meta.env.VITE_API_URL || "https://vehicle-final-final.onrender.com";
-// WebSocket URL
+// src/config.ts
+
+// Laptop IPv4 + backend port
+const LOCAL_BACKEND = "http://10.29.71.71:5000";
+
+export const API_URL = import.meta.env.VITE_API_URL || LOCAL_BACKEND;
 export const WS_URL = API_URL;
 
 export const isDevelopment = import.meta.env.DEV;
