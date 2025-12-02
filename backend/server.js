@@ -13,12 +13,16 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: "*",
+    origin: [
+      "https://vehicle-final-final-1.onrender.com",
+      "http://localhost:5173"
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 
 // Database Connection
 mongoose
@@ -54,10 +58,13 @@ const server = http.createServer(app);
 // -------------------------------
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: [
+      "https://vehicle-final-final-1.onrender.com",
+      "http://localhost:5173"
+    ],
     methods: ["GET", "POST"],
-    credentials: true,
-  },
+    credentials: true
+  }
 });
 
 // Models
