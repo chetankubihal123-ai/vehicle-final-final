@@ -1,9 +1,12 @@
 // src/config.ts
 
-// Laptop IPv4 + backend port
-const LOCAL_BACKEND = "http://10.29.71.71:5000";
+// Production backend (Render)
+const PROD_BACKEND = "https://vehicle-final.onrender.com";
 
-export const API_URL = import.meta.env.VITE_API_URL || LOCAL_BACKEND;
+// Use VITE_API_URL if provided, otherwise fallback to Render backend
+export const API_URL = import.meta.env.VITE_API_URL || PROD_BACKEND;
+
+// WebSocket will run on same backend
 export const WS_URL = API_URL;
 
 export const isDevelopment = import.meta.env.DEV;
