@@ -1,7 +1,7 @@
 // src/config.ts
 
 // Production backend (Render)
-const PROD_BACKEND = "https://vehicle-final.onrender.com";
+const PROD_BACKEND = "https://vehicle-final-final.onrender.com";
 
 // Use VITE_API_URL if provided, otherwise fallback to Render backend
 export const API_URL = import.meta.env.VITE_API_URL || PROD_BACKEND;
