@@ -1,5 +1,14 @@
 const Driver = require('../models/Driver');
 const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+
+// Utility: Normalize assignedVehicle field
+const normalizeVehicle = (value) => {
+    if (!value) return null;
+    if (value === "No Vehicle Assigned") return null;
+    if (value === "") return null;
+    return value; // valid ObjectId
+};
 
 // Add a new driver
 exports.addDriver = async (req, res) => {
@@ -7,17 +16,20 @@ exports.addDriver = async (req, res) => {
         const { name, email, password, licenseNumber, assignedVehicle } = req.body;
 
         // 1. Create User account for driver
-        let user = await User.findOne({ email });
-        if (user) return res.status(400).json({ message: 'User with this email already exists' });
+        let existingUser = await User.findOne({ email });
+        if (existingUser)
+            return res.status(400).json({ message: 'User with this email already exists' });
 
-        const hashedPassword = await require('bcryptjs').hash(password, 10);
-        user = new User({
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = new User({
             name,
             email,
             password: hashedPassword,
             role: 'driver',
-            isVerified: true // Auto-verify drivers added by admin/owner
+            isVerified: true  // owner/admin added -> auto verified
         });
+
         await user.save();
 
         // 2. Create Driver profile
@@ -25,19 +37,22 @@ exports.addDriver = async (req, res) => {
             userId: user._id,
             ownerId: req.user.id,
             licenseNumber,
-            assignedVehicle
+            assignedVehicle: normalizeVehicle(assignedVehicle)
         });
 
         await driver.save();
 
-        // If vehicle assigned, update vehicle
-        if (assignedVehicle) {
+        // 3. Update vehicle state only if valid
+        const vehicleId = normalizeVehicle(assignedVehicle);
+        if (vehicleId) {
             const Vehicle = require('../models/Vehicle');
-            await Vehicle.findByIdAndUpdate(assignedVehicle, { currentDriver: driver._id });
+            await Vehicle.findByIdAndUpdate(vehicleId, { currentDriver: driver._id });
         }
 
         res.status(201).json({ message: 'Driver added successfully', driver });
+
     } catch (error) {
+        console.error("Add Driver Error:", error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
@@ -49,28 +64,41 @@ exports.updateDriver = async (req, res) => {
         const driver = await Driver.findById(req.params.id);
 
         if (!driver) return res.status(404).json({ message: 'Driver not found' });
+
+        // Auth check
         if (req.user.role !== 'admin' && driver.ownerId.toString() !== req.user.id) {
             return res.status(403).json({ message: 'Access denied' });
         }
 
-        // Handle vehicle change
-        if (assignedVehicle && assignedVehicle !== driver.assignedVehicle?.toString()) {
+        const newVehicle = normalizeVehicle(assignedVehicle);
+        const oldVehicle = driver.assignedVehicle;
+
+        // Handle vehicle reassignment
+        if (String(newVehicle) !== String(oldVehicle)) {
             const Vehicle = require('../models/Vehicle');
-            // Clear old vehicle
-            if (driver.assignedVehicle) {
-                await Vehicle.findByIdAndUpdate(driver.assignedVehicle, { $unset: { currentDriver: "" } });
+
+            // Clear old vehicle if exists
+            if (oldVehicle) {
+                await Vehicle.findByIdAndUpdate(oldVehicle, { $unset: { currentDriver: "" } });
             }
-            // Set new vehicle
-            await Vehicle.findByIdAndUpdate(assignedVehicle, { currentDriver: driver._id });
+
+            // Assign new vehicle if valid
+            if (newVehicle) {
+                await Vehicle.findByIdAndUpdate(newVehicle, { currentDriver: driver._id });
+            }
+
+            driver.assignedVehicle = newVehicle;
         }
 
-        driver.licenseNumber = licenseNumber || driver.licenseNumber;
-        driver.assignedVehicle = assignedVehicle || driver.assignedVehicle;
-        driver.status = status || driver.status;
+        driver.licenseNumber = licenseNumber ?? driver.licenseNumber;
+        driver.status = status ?? driver.status;
 
         await driver.save();
+
         res.json({ message: 'Driver updated successfully', driver });
+
     } catch (error) {
+        console.error("Update Driver Error:", error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
@@ -78,13 +106,16 @@ exports.updateDriver = async (req, res) => {
 // Get all drivers
 exports.getDrivers = async (req, res) => {
     try {
-        let query = {};
-        if (req.user.role !== 'admin') {
-            query.ownerId = req.user.id;
-        }
+        const filter = req.user.role === 'admin'
+            ? {}
+            : { ownerId: req.user.id };
 
-        const drivers = await Driver.find(query).populate('userId', 'name email').populate('assignedVehicle', 'registrationNumber');
+        const drivers = await Driver.find(filter)
+            .populate('userId', 'name email')
+            .populate('assignedVehicle', 'registrationNumber');
+
         res.json(drivers);
+
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
@@ -98,34 +129,39 @@ exports.assignVehicle = async (req, res) => {
         const driver = await Driver.findById(driverId);
         if (!driver) return res.status(404).json({ message: 'Driver not found' });
 
-        // Check ownership
         if (req.user.role !== 'admin' && driver.ownerId.toString() !== req.user.id) {
             return res.status(403).json({ message: 'Access denied' });
         }
 
-        driver.assignedVehicle = vehicleId;
+        const newVehicle = normalizeVehicle(vehicleId);
+
+        driver.assignedVehicle = newVehicle;
         await driver.save();
 
-        // Also update vehicle's current driver
         const Vehicle = require('../models/Vehicle');
-        await Vehicle.findByIdAndUpdate(vehicleId, { currentDriver: driverId });
+        await Vehicle.findByIdAndUpdate(newVehicle, { currentDriver: driverId });
 
         res.json({ message: 'Vehicle assigned successfully' });
+
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
+
 // Get logged-in driver's assigned vehicle
 exports.getMyVehicle = async (req, res) => {
     try {
-        const driver = await Driver.findOne({ userId: req.user.id }).populate('assignedVehicle');
-        if (!driver) return res.status(404).json({ message: 'Driver profile not found' });
+        const driver = await Driver.findOne({ userId: req.user.id })
+            .populate('assignedVehicle');
 
-        if (!driver.assignedVehicle) {
-            return res.json({ message: 'No vehicle assigned', vehicle: null });
-        }
+        if (!driver)
+            return res.status(404).json({ message: 'Driver profile not found' });
 
-        res.json({ vehicle: driver.assignedVehicle });
+        res.json({
+            vehicle: driver.assignedVehicle || null,
+            message: driver.assignedVehicle ? 'Vehicle assigned' : 'No vehicle assigned'
+        });
+
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
