@@ -13,15 +13,11 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-  origin: [
-    "https://vehicle-frontend-tuhe.onrender.com",
-    "http://localhost:5173"
-  ],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-})
-
+    origin: "*",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
 );
 
 // Database Connection
@@ -48,18 +44,24 @@ app.get("/", (req, res) => {
   res.send("Vehicle Management System API is running");
 });
 
-// HTTP server + Socket.io
+/* -------------------------
+   Create HTTP Server FIRST
+-------------------------- */
+const server = http.createServer(app);
+
+/* -------------------------
+   Initialize Socket.IO
+-------------------------- */
 const io = new Server(server, {
   cors: {
     origin: [
       "https://vehicle-frontend-tuhe.onrender.com",
-      "http://localhost:5173"
+      "http://localhost:5173",
     ],
     methods: ["GET", "POST"],
-    credentials: true
-  }
+    credentials: true,
+  },
 });
-
 
 // Models
 const LiveLocation = require("./models/LiveLocation");
@@ -81,7 +83,7 @@ io.use((socket, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    socket.user = decoded; // { id, role, iat, exp }
+    socket.user = decoded;
     next();
   } catch (err) {
     console.error("Socket auth error:", err.message);
@@ -89,32 +91,18 @@ io.use((socket, next) => {
   }
 });
 
-// Socket.io Connection Handler
+// Socket handlers
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id, "role:", socket.user?.role);
 
-  // Viewer (admin/fleet_owner) joins vehicle room
   socket.on("join_vehicle", async (vehicleId) => {
     try {
-      console.log("[SOCKET] join_vehicle:", {
-        socket: socket.id,
-        role: socket.user?.role,
-        vehicleId,
-      });
-
-      if (!["fleet_owner", "admin"].includes(socket.user.role)) {
-        console.warn(
-          `Socket ${socket.id} blocked from join_vehicle (role: ${socket.user.role})`
-        );
-        return;
-      }
+      if (!["fleet_owner", "admin"].includes(socket.user.role)) return;
 
       const roomId = String(vehicleId);
       socket.join(roomId);
-      console.log(`User ${socket.id} joined vehicle room: ${roomId}`);
 
-      // 1) Send last known location immediately
-      const lastLocation = await LiveLocation.findOne({ vehicleId: vehicleId });
+      const lastLocation = await LiveLocation.findOne({ vehicleId });
       if (lastLocation) {
         socket.emit("receive_location", {
           vehicleId,
@@ -128,16 +116,15 @@ io.on("connection", (socket) => {
         });
       }
 
-      // 2) Send today’s route history
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
 
       const history = await RouteHistory.findOne({
-        vehicleId: vehicleId,
+        vehicleId,
         createdAt: { $gte: startOfDay },
       });
 
-      if (history && history.locations.length > 0) {
+      if (history) {
         const routePoints = history.locations.map((loc) => ({
           lat: loc.lat,
           lng: loc.lng,
@@ -150,68 +137,28 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Driver sends live location
   socket.on("send_location", async (data) => {
     try {
-      if (socket.user.role !== "driver") {
-        console.warn(
-          `Socket ${socket.id} blocked from send_location (role: ${socket.user.role})`
-        );
-        return;
-      }
+      if (socket.user.role !== "driver") return;
 
       const driverId = socket.user.id;
       const { vehicleId, location } = data || {};
-
-      console.log(`[DRIVER ${socket.id}] send_location received:`, {
-        driverId,
-        vehicleId,
-        location,
-      });
-
-      if (!vehicleId || !location) {
-        console.warn("[SOCKET] send_location missing fields:", data);
-        return;
-      }
+      if (!vehicleId || !location) return;
 
       const { lat, lng, speed, timestamp } = location;
 
-      // Strict validation of coordinates
-      if (
-        typeof lat !== "number" ||
-        typeof lng !== "number" ||
-        Number.isNaN(lat) ||
-        Number.isNaN(lng)
-      ) {
-        console.warn(
-          "[SOCKET] Ignoring send_location with invalid coords:",
-          data
-        );
-        return;
-      }
-
       const roomId = String(vehicleId);
+      socket.join(roomId);
+
       const ts = timestamp ? new Date(timestamp) : new Date();
       const spd = typeof speed === "number" ? speed : 0;
 
-      // Ensure driver joined its own room
-      socket.join(roomId);
-
-      // Broadcast to all viewers of this vehicle
-      const payload = {
+      io.to(roomId).emit("receive_location", {
         vehicleId,
         location: { lat, lng, timestamp: ts, speed: spd },
         driverId,
-      };
+      });
 
-      console.log(
-        `[BROADCAST] Vehicle ${vehicleId} location update:`,
-        { lat, lng, speed: spd, room: roomId, listeners: io.sockets.adapter.rooms.get(roomId)?.size || 0 }
-      );
-
-      io.to(roomId).emit("receive_location", payload);
-
-      // Save to LiveLocation
       await LiveLocation.findOneAndUpdate(
         { vehicleId },
         {
@@ -225,7 +172,6 @@ io.on("connection", (socket) => {
         { upsert: true, new: true }
       );
 
-      // Save to RouteHistory for today
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
 
@@ -236,9 +182,7 @@ io.on("connection", (socket) => {
         },
         {
           $setOnInsert: { vehicleId, driverId },
-          $push: {
-            locations: { lat, lng, timestamp: ts, speed: spd },
-          },
+          $push: { locations: { lat, lng, timestamp: ts, speed: spd } },
         },
         { upsert: true, new: true }
       );
@@ -252,9 +196,11 @@ io.on("connection", (socket) => {
   });
 });
 
-// Start Server
+/* -------------------------
+   Start server properly
+-------------------------- */
 const PORT = process.env.PORT || 5000;
+
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 });
-
