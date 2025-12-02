@@ -72,11 +72,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(normalizedUser);
   };
 
-  // LOGIN
+  // PASSWORD LOGIN
   const login = async (email: string, password: string) => {
     setApiLoading(true);
     try {
-      const res = await axios.post(`/auth/login`, { email, password });
+      const res = await axios.post(
+        `/auth/login`,
+        { email, password },
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
+        }
+      );
       const { token, user } = res.data;
       persistUser(token, user);
     } catch (err: any) {
@@ -95,7 +102,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ) => {
     setApiLoading(true);
     try {
-      await axios.post(`/auth/register`, { email, password, name, role });
+      await axios.post(
+        `/auth/register`,
+        { email, password, name, role },
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
+        }
+      );
     } catch (err: any) {
       throw new Error(err.response?.data?.message || "Registration failed");
     } finally {
@@ -103,39 +117,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // VERIFY OTP AFTER REGISTER
   const verifyOTP = async (email: string, otp: string) => {
     setApiLoading(true);
     try {
-      await axios.post(`/auth/verify-otp`, { email, otp });
+      await axios.post(
+        `/auth/verify-otp`,
+        { email, otp },
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
+        }
+      );
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || "Invalid OTP");
     } finally {
       setApiLoading(false);
     }
   };
 
+  // RESEND OTP (REGISTER)
   const resendOTP = async (email: string) => {
     setApiLoading(true);
     try {
-      await axios.post(`/auth/resend-otp`, { email });
+      await axios.post(
+        `/auth/resend-otp`,
+        { email },
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
+        }
+      );
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || "Failed to resend OTP");
     } finally {
       setApiLoading(false);
     }
   };
 
+  // SEND OTP FOR LOGIN
   const sendLoginOTP = async (email: string) => {
     setApiLoading(true);
     try {
-      await axios.post(`/auth/send-login-otp`, { email });
+      await axios.post(
+        `/auth/send-login-otp`,
+        { email },
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
+        }
+      );
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || "Failed to send OTP");
     } finally {
       setApiLoading(false);
     }
   };
 
+  // VERIFY OTP FOR LOGIN
   const verifyLoginOTP = async (email: string, otp: string) => {
     setApiLoading(true);
     try {
-      const res = await axios.post(`/auth/verify-login-otp`, { email, otp });
+      const res = await axios.post(
+        `/auth/verify-login-otp`,
+        { email, otp },
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
+        }
+      );
+
       const { token, user } = res.data;
       persistUser(token, user);
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || "Invalid OTP");
     } finally {
       setApiLoading(false);
     }
