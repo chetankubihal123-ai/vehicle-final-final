@@ -2,7 +2,7 @@
 const { Resend } = require("resend");
 
 // Load API key from environment
-const resend = new Resend(process.env.re_fUTuXmDz_ANDEVXpsVYVxjFzC4V6NvKru);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Simple clean OTP HTML email
 const createOTPEmailHTML = (otp, name = "User") => `
