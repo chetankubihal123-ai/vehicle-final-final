@@ -8,6 +8,7 @@ const {
   getDrivers,
   assignVehicle,
   getMyVehicle,
+  deleteDriver,
 } = require("../controllers/driverController");
 
 // Roles allowed to manage drivers
