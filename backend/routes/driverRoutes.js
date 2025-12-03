@@ -30,4 +30,7 @@ router.post("/assign", auth(OWNER_ROLES), assignVehicle);
 // Driver’s own vehicle info
 router.get("/my-vehicle", auth(["driver"]), getMyVehicle);
 
+// Delete a driver
+router.delete("/:id", auth(OWNER_ROLES), deleteDriver);
+
 module.exports = router;
