@@ -1,11 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import {
   Car,
   MapPin,
   DollarSign,
   AlertTriangle,
-  Image as ImageIcon,
+  Activity,
+  Gauge,
+  Calendar,
+  Filter,
+  TrendingUp,
+  Fuel,
+  Wrench,
 } from "lucide-react";
 import {
   LineChart,
@@ -24,33 +30,126 @@ import { useVehicles } from "../hooks/useVehicles";
 import { useAuth } from "../contexts/AuthContext";
 import { format, subDays, parseISO, isAfter } from "date-fns";
 
+// Simple type helpers so TS stays happy with your existing data
+type AnyVehicle = any;
+type AnyTrip = any;
+type AnyExpense = any;
+
+const VEHICLE_IMAGES = {
+  bike:
+    "https://images.unsplash.com/photo-1502877338535-766e1452684a?q=80&w=1200&auto=format&fit=crop",
+  car:
+    "https://images.unsplash.com/photo-1542362567-b07e54358753?q=80&w=1200&auto=format&fit=crop",
+  truck:
+    "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1200&auto=format&fit=crop",
+  bus:
+    "https://images.unsplash.com/photo-1542831371-d531d36971e6?q=80&w=1200&auto=format&fit=crop",
+};
+
+// Resolve correct image based on vehicle type
+const vehicleImageFor = (vehicle: AnyVehicle) => {
+  const rawType = (
+    vehicle.type ||
+    vehicle.vehicle_type ||
+    vehicle.make ||
+    ""
+  ).toLowerCase();
+
+  if (
+    rawType.includes("bike") ||
+    rawType.includes("scooter") ||
+    rawType.includes("activa") ||
+    rawType.includes("motorcycle")
+  ) {
+    return vehicle.image || VEHICLE_IMAGES.bike;
+  }
+
+  if (rawType.includes("truck") || rawType.includes("lorry")) {
+    return vehicle.image || VEHICLE_IMAGES.truck;
+  }
+
+  if (rawType.includes("bus")) {
+    return vehicle.image || VEHICLE_IMAGES.bus;
+  }
+
+  // default: car
+  return vehicle.image || VEHICLE_IMAGES.car;
+};
+
+// Small stat card
+const StatCard = ({
+  title,
+  value,
+  icon: Icon,
+  accent,
+  subtitle,
+}: {
+  title: string;
+  value: string | number;
+  icon: any;
+  accent: string;
+  subtitle?: string;
+}) => (
+  <motion.div
+    whileHover={{ translateY: -4, boxShadow: "0 10px 30px rgba(15,23,42,0.18)" }}
+    className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 px-5 py-4 text-white"
+  >
+    <div className="flex items-start justify-between">
+      <div>
+        <p className="text-xs uppercase tracking-wide text-slate-400">
+          {title}
+        </p>
+        <p className="mt-1 text-2xl font-semibold">{value}</p>
+        {subtitle && (
+          <p className="mt-1 text-xs text-slate-400">{subtitle}</p>
+        )}
+      </div>
+      <div
+        className={`flex h-10 w-10 items-center justify-center rounded-xl bg-${accent}-500/15`}
+      >
+        <Icon className={`h-5 w-5 text-${accent}-400`} />
+      </div>
+    </div>
+    <div className="pointer-events-none absolute -right-10 bottom-[-40px] h-32 w-32 rounded-full bg-white/5" />
+  </motion.div>
+);
+
 export default function Dashboard() {
   const { user } = useAuth();
   const { vehicles, trips, expenses } = useVehicles();
-  const [assignedVehicle, setAssignedVehicle] = useState<any>(null);
+  const [assignedVehicle, setAssignedVehicle] = useState<AnyVehicle | null>(
+    null
+  );
 
+  // ---------------- DRIVER-SPECIFIC DATA ----------------
   useEffect(() => {
-    if (user?.role === 'driver') {
+    if (user?.role === "driver") {
       const fetchMyVehicle = async () => {
         try {
-          const res = await axios.get('/drivers/me/vehicle');
+          const res = await axios.get("/drivers/me/vehicle");
           if (res.data.vehicle) {
             setAssignedVehicle(res.data.vehicle);
           }
         } catch (err) {
-          console.error('Error fetching assigned vehicle:', err);
+          console.error("Error fetching assigned vehicle:", err);
         }
       };
       fetchMyVehicle();
     }
   }, [user]);
 
+  // ---------------- DERIVED METRICS ----------------
   const totalVehicles = vehicles.length;
   const totalTrips = trips.length;
-  const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0);
-  const activeVehicles = vehicles.filter((v) => v.status === "active").length;
+  const totalExpenses = expenses.reduce(
+    (s: number, e: AnyExpense) => s + (e.amount || 0),
+    0
+  );
+  const activeVehicles = vehicles.filter(
+    (v: AnyVehicle) => v.status === "active"
+  ).length;
 
-  const upcomingReminders = vehicles.filter((v) => {
+  const upcomingReminders: AnyVehicle[] = vehicles.filter((v: AnyVehicle) => {
     try {
       const insuranceExpiry = v.insurance_expiry
         ? parseISO(v.insurance_expiry)
@@ -70,246 +169,384 @@ export default function Dashboard() {
     }
   });
 
-  // Monthly Expenses
-  const monthlyExpenses = Array.from({ length: 6 }, (_, i) => {
-    const date = subDays(new Date(), (5 - i) * 30);
-    const month = date.getMonth();
-    const year = date.getFullYear();
+  // Monthly expenses for last 6 months
+  const monthlyExpenses = useMemo(() => {
+    return Array.from({ length: 6 }, (_, i) => {
+      const date = subDays(new Date(), (5 - i) * 30);
+      const month = date.getMonth();
+      const year = date.getFullYear();
 
-    const amount = expenses
-      .filter((exp) => {
-        const d = new Date(exp.expense_date);
-        return d.getMonth() === month && d.getFullYear() === year;
-      })
-      .reduce((s, e) => s + (e.amount || 0), 0);
+      const amount = expenses
+        .filter((exp: AnyExpense) => {
+          const d = new Date(exp.expense_date);
+          return d.getMonth() === month && d.getFullYear() === year;
+        })
+        .reduce((s: number, e: AnyExpense) => s + (e.amount || 0), 0);
 
-    return { month: format(date, "MMM"), amount };
-  });
+      return { month: format(date, "MMM"), amount };
+    });
+  }, [expenses]);
 
-  // Expense breakdown
-  const expenseBreakdown = [
-    {
-      name: "Fuel",
-      value: expenses
-        .filter((e) => e.category === "fuel")
-        .reduce((s, e) => s + (e.amount || 0), 0),
-      color: "#6366F1",
-    },
-    {
-      name: "Maintenance",
-      value: expenses
-        .filter((e) => e.category === "maintenance")
-        .reduce((s, e) => s + (e.amount || 0), 0),
-      color: "#10B981",
-    },
-    {
-      name: "Insurance",
-      value: expenses
-        .filter((e) => e.category === "insurance")
-        .reduce((s, e) => s + (e.amount || 0), 0),
-      color: "#F59E0B",
-    },
-    {
-      name: "Other",
-      value: expenses
-        .filter(
-          (e) => !["fuel", "maintenance", "insurance"].includes(e.category)
+  // Expense breakdown by category
+  const expenseBreakdown = useMemo(() => {
+    const buckets = [
+      {
+        name: "Fuel",
+        key: "fuel",
+        color: "#6366F1",
+      },
+      {
+        name: "Maintenance",
+        key: "maintenance",
+        color: "#10B981",
+      },
+      {
+        name: "Insurance",
+        key: "insurance",
+        color: "#F59E0B",
+      },
+      {
+        name: "Other",
+        key: "other",
+        color: "#EF4444",
+      },
+    ];
+
+    const data = buckets.map((b) => {
+      const value = expenses
+        .filter((e: AnyExpense) =>
+          b.key === "other"
+            ? !["fuel", "maintenance", "insurance"].includes(e.category)
+            : e.category === b.key
         )
-        .reduce((s, e) => s + (e.amount || 0), 0),
-      color: "#EF4444",
-    },
-  ].filter((b) => b.value > 0);
+        .reduce((s: number, e: AnyExpense) => s + (e.amount || 0), 0);
+      return { name: b.name, value, color: b.color };
+    });
 
-  // Vehicle Image Resolver
-  const vehicleImageFor = (vehicle: any) => {
-    const type =
-      (vehicle.vehicle_type || vehicle.make || "").toLowerCase();
+    return data.filter((d) => d.value > 0);
+  }, [expenses]);
 
-    if (type.includes("truck"))
-      return "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1200&auto=format&fit=crop";
+  // Fleet health breakdown by status
+  const fleetStatusBreakdown = useMemo(() => {
+    const grouped: Record<string, number> = {};
+    vehicles.forEach((v: AnyVehicle) => {
+      const key = (v.status || "unknown").toLowerCase();
+      grouped[key] = (grouped[key] || 0) + 1;
+    });
 
-    if (type.includes("bus"))
-      return "https://images.unsplash.com/photo-1542831371-d531d36971e6?q=80&w=1200&auto=format&fit=crop";
+    const colorMap: Record<string, string> = {
+      active: "#22C55E",
+      maintenance: "#F97316",
+      inactive: "#9CA3AF",
+      unknown: "#6366F1",
+    };
 
-    return (
-      vehicle.image ||
-      "https://images.unsplash.com/photo-1542362567-b07e54358753?q=80&w=1200&auto=format&fit=crop"
-    );
-  };
+    return Object.entries(grouped).map(([status, count]) => ({
+      name: status.charAt(0).toUpperCase() + status.slice(1),
+      value: count,
+      color: colorMap[status] || "#6366F1",
+    }));
+  }, [vehicles]);
 
-  // Stat Card Component
-  const StatCard = ({ title, value, icon: Icon, gradient, subtitle }: any) => (
-    <motion.div
-      whileHover={{
-        translateY: -6,
-        boxShadow: "0 12px 36px rgba(0,0,0,0.15)",
-      }}
-      className="rounded-2xl overflow-hidden p-5 text-white relative"
-      style={{ background: gradient, minHeight: 130 }}
-    >
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-sm opacity-90">{title}</p>
-          <p className="text-3xl font-bold mt-1">{value}</p>
-          {subtitle && (
-            <p className="text-xs opacity-80 mt-1">{subtitle}</p>
-          )}
-        </div>
-        <div className="p-3 bg-white/20 rounded-lg">
-          <Icon className="h-7 w-7 text-white" />
-        </div>
-      </div>
+  // Top vehicles by distance driven (based on trips)
+  const topVehiclesByDistance = useMemo(() => {
+    const distanceMap: Record<string, number> = {};
 
-      <div
-        className="absolute"
-        style={{
-          right: -40,
-          bottom: -30,
-          width: 150,
-          height: 150,
-          background: "rgba(255,255,255,0.06)",
-          borderRadius: "50%",
-        }}
-      />
-    </motion.div>
+    trips.forEach((t: AnyTrip) => {
+      const distance = (t.end_mileage ?? 0) - (t.start_mileage ?? 0);
+      if (!t.vehicle_id) return;
+      distanceMap[t.vehicle_id] = (distanceMap[t.vehicle_id] || 0) + distance;
+    });
+
+    const enriched = Object.entries(distanceMap)
+      .map(([vehicleId, distance]) => {
+        const vehicle = vehicles.find((v: AnyVehicle) => v.id === vehicleId);
+        return {
+          id: vehicleId,
+          distance,
+          vehicle_number: vehicle?.vehicle_number || "Unknown",
+          makeModel: vehicle ? `${vehicle.make} ${vehicle.model}` : "",
+        };
+      })
+      .sort((a, b) => b.distance - a.distance)
+      .slice(0, 4);
+
+    return enriched;
+  }, [trips, vehicles]);
+
+  // Recent 5 trips
+  const recentTrips = useMemo(
+    () => trips.slice(0, 5),
+    [trips]
   );
 
+  // ---------------- RENDER ----------------
+  const isDriver = user?.role === "driver";
+
   return (
-    <div className="p-6 space-y-8">
-      {/* HEADER */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-900">
-          Fleet Dashboard
-        </h1>
-        <p className="text-gray-500 mt-1">
-          Welcome back{user?.name ? `, ${user.name}` : ""} 👋
-        </p>
+    <div className="space-y-6 bg-slate-50 p-6">
+      {/* TOP HEADER */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight text-slate-900">
+            {isDriver ? "Driver Dashboard" : "Fleet Command Center"}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Welcome back{user?.name ? `, ${user.name}` : ""}. Here’s what’s
+            happening in your fleet today.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+            <Filter className="h-4 w-4" />
+            Quick Filters
+          </button>
+          {!isDriver && (
+            <button className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-lg hover:opacity-90">
+              <TrendingUp className="h-4 w-4" />
+              Fleet Insights
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Assigned Vehicle Card for Drivers */}
-      {user?.role === 'driver' && assignedVehicle && (
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 text-white shadow-lg">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <Car className="h-6 w-6" />
-              Your Assigned Vehicle
-            </h2>
-            <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">
-              Active
-            </span>
-          </div>
-          <div className="flex items-center gap-6">
-            <img
-              src={vehicleImageFor(assignedVehicle)}
-              alt="Vehicle"
-              className="w-32 h-24 rounded-lg object-cover border-2 border-white/30"
-            />
-            <div>
-              <p className="text-3xl font-bold">{assignedVehicle.registrationNumber}</p>
-              <p className="text-lg opacity-90">{assignedVehicle.make} {assignedVehicle.model}</p>
-              <div className="flex gap-4 mt-2 text-sm opacity-80">
-                <span>Type: {assignedVehicle.type}</span>
-                <span>•</span>
-                <span>Fuel: {assignedVehicle.fuelType}</span>
+      {/* DRIVER ASSIGNED VEHICLE CARD */}
+      {isDriver && assignedVehicle && (
+        <motion.div
+          initial={{ opacity: 0, translateY: 10 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          className="overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-600 p-5 text-white shadow-xl"
+        >
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
+                <Car className="h-7 w-7" />
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-white/70">
+                  Your Assigned Vehicle
+                </p>
+                <p className="text-2xl font-bold">
+                  {assignedVehicle.registrationNumber ||
+                    assignedVehicle.vehicle_number}
+                </p>
+                <p className="text-sm text-white/80">
+                  {assignedVehicle.make} {assignedVehicle.model} •{" "}
+                  {assignedVehicle.type || assignedVehicle.vehicle_type}
+                </p>
               </div>
             </div>
+            <div className="flex flex-wrap gap-3">
+              <div className="rounded-xl bg-black/20 px-3 py-2 text-xs">
+                <span className="font-semibold">Fuel:</span>{" "}
+                {assignedVehicle.fuelType || assignedVehicle.fuel_type || "N/A"}
+              </div>
+              <div className="rounded-xl bg-black/20 px-3 py-2 text-xs">
+                <span className="font-semibold">Status:</span> Active
+              </div>
+              {assignedVehicle.currentMileage && (
+                <div className="rounded-xl bg-black/20 px-3 py-2 text-xs">
+                  <span className="font-semibold">Odometer:</span>{" "}
+                  {assignedVehicle.currentMileage} km
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
-
-      {/* STATS GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* KPI STRIP */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Vehicles"
           value={totalVehicles}
           icon={Car}
-          gradient="linear-gradient(135deg,#7c3aed,#4f46e5)"
-          subtitle={`${activeVehicles} active`}
+          accent="indigo"
+          subtitle={`${activeVehicles} active in operation`}
         />
         <StatCard
-          title="Total Trips"
+          title="Trips Logged"
           value={totalTrips}
           icon={MapPin}
-          gradient="linear-gradient(135deg,#06b6d4,#0284c7)"
-          subtitle="All time"
+          accent="cyan"
+          subtitle="Lifetime completed trips"
         />
         <StatCard
-          title="Total Expenses"
+          title="Total Spend"
           value={`₹${totalExpenses.toLocaleString()}`}
           icon={DollarSign}
-          gradient="linear-gradient(135deg,#f97316,#ef4444)"
-          subtitle="All time"
+          accent="emerald"
+          subtitle="All recorded expenses"
         />
         <StatCard
-          title="Pending Reminders"
+          title="Health Alerts"
           value={upcomingReminders.length}
           icon={AlertTriangle}
-          gradient="linear-gradient(135deg,#ef4444,#f97316)"
-          subtitle="Next 30 days"
+          accent="amber"
+          subtitle="Due in next 30 days"
         />
       </div>
 
       {/* MAIN GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* VEHICLES LIST */}
-        <div className="bg-white p-5 rounded-2xl shadow-sm border h-full">
-          <h3 className="text-lg font-semibold mb-4">Vehicles</h3>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* LEFT COLUMN – VEHICLES / HEALTH */}
+        <div className="space-y-6">
+          {/* Vehicle list */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">
+                  Fleet Overview
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Quick look at all registered vehicles
+                </p>
+              </div>
+              <Gauge className="h-5 w-5 text-slate-400" />
+            </div>
 
-          <div className="space-y-4 max-h-[550px] overflow-y-auto pr-2">
-            {vehicles.map((v) => (
-              <motion.div
-                key={v.id}
-                whileHover={{ scale: 1.01 }}
-                className="flex items-center gap-4 p-3 rounded-xl border hover:shadow transition"
-              >
-                <img
-                  src={vehicleImageFor(v)}
-                  alt={v.vehicle_number}
-                  className="w-20 h-14 rounded-lg object-cover"
-                />
+            <div className="max-h-[380px] space-y-3 overflow-y-auto pr-1">
+              {vehicles.map((v: AnyVehicle) => (
+                <motion.div
+                  key={v.id}
+                  whileHover={{ scale: 1.01 }}
+                  className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 hover:bg-slate-50"
+                >
+                  <img
+                    src={vehicleImageFor(v)}
+                    alt={v.vehicle_number}
+                    className="h-14 w-20 flex-shrink-0 rounded-lg object-cover"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-slate-900">
+                      {v.vehicle_number}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {v.make} {v.model}
+                    </p>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Type:{" "}
+                      {v.vehicle_type || v.type || "N/A"} • Fuel:{" "}
+                      {v.fuel_type || v.fuelType || "N/A"}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        v.status === "active"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : v.status === "maintenance"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {v.status || "Unknown"}
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      {v.service_due_date
+                        ? `Service: ${format(
+                            parseISO(v.service_due_date),
+                            "MMM dd"
+                          )}`
+                        : "Service: N/A"}
+                    </span>
+                  </div>
+                </motion.div>
+              ))}
 
-                <div className="flex-1">
-                  <p className="font-semibold">{v.vehicle_number}</p>
-                  <p className="text-sm text-gray-500">
-                    {v.make} {v.model}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Service Due:{" "}
-                    {v.service_due_date
-                      ? format(parseISO(v.service_due_date), "MMM dd, yyyy")
-                      : "N/A"}
+              {vehicles.length === 0 && (
+                <div className="py-10 text-center text-slate-400">
+                  No vehicles added yet.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Fleet health donut */}
+          {!isDriver && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Fleet Health
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Status distribution across your vehicles
                   </p>
                 </div>
-              </motion.div>
-            ))}
-
-            {vehicles.length === 0 && (
-              <div className="text-center text-gray-400 py-10">
-                <ImageIcon className="mx-auto w-10 h-10 mb-3 opacity-40" />
-                No vehicles added yet
+                <Activity className="h-5 w-5 text-slate-400" />
               </div>
-            )}
-          </div>
+              <div className="flex items-center gap-4">
+                <div className="h-40 flex-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={fleetStatusBreakdown}
+                        dataKey="value"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={70}
+                        innerRadius={40}
+                        paddingAngle={3}
+                      >
+                        {fleetStatusBreakdown.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex-1 space-y-2">
+                  {fleetStatusBreakdown.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span
+                          className="h-2 w-2 rounded-full"
+                          style={{ background: item.color }}
+                        />
+                        <span className="capitalize text-slate-600">
+                          {item.name}
+                        </span>
+                      </div>
+                      <span className="text-xs font-medium text-slate-900">
+                        {item.value} vehicles
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* CHARTS */}
-        <div className="col-span-1 lg:col-span-2 space-y-6">
-          {/* MONTHLY EXPENSES */}
-          <div className="bg-white p-5 rounded-2xl shadow-sm border">
-            <h3 className="text-lg font-semibold mb-4">Monthly Expenses</h3>
+        {/* RIGHT COLUMN – CHARTS & RECENT ACTIVITY */}
+        <div className="space-y-6 lg:col-span-2">
+          {/* Monthly expenses line chart */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Spend Trend
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Monthly expenses over the last 6 months
+                </p>
+              </div>
+              <Calendar className="h-5 w-5 text-slate-400" />
+            </div>
 
-            <div className="h-72">
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={monthlyExpenses}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="month" tick={{ fill: "#6b7280" }} />
                   <YAxis tick={{ fill: "#6b7280" }} />
-                  <Tooltip formatter={(v) => `₹${v}`} />
+                  <Tooltip formatter={(v: any) => `₹${v}`} />
                   <Line
                     type="monotone"
                     dataKey="amount"
-                    stroke="#7c3aed"
+                    stroke="#6366F1"
                     strokeWidth={3}
                     dot={{ r: 4 }}
                     activeDot={{ r: 6 }}
@@ -319,11 +556,16 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* EXPENSE BREAKDOWN + RECENT TRIPS */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* EXPENSE PIE */}
-            <div className="bg-white p-5 rounded-2xl shadow-sm border">
-              <h3 className="font-semibold mb-4">Expense Breakdown</h3>
+          {/* Expense breakdown + top vehicles + recent trips */}
+          <div className="grid gap-6 md:grid-cols-3">
+            {/* Expense Breakdown */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Expense Mix
+                </h3>
+                <Fuel className="h-5 w-5 text-slate-400" />
+              </div>
               <div className="h-40">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -340,42 +582,101 @@ export default function Dashboard() {
                         <Cell key={i} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v) => `₹${v}`} />
+                    <Tooltip formatter={(v: any) => `₹${v}`} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
+              <div className="mt-2 space-y-1">
+                {expenseBreakdown.map((e, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ background: e.color }}
+                      />
+                      <span className="text-slate-600">{e.name}</span>
+                    </div>
+                    <span className="font-medium text-slate-900">
+                      ₹{e.value.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* RECENT TRIPS */}
-            <div className="bg-white p-5 rounded-2xl shadow-sm border md:col-span-2">
-              <h3 className="font-semibold mb-4">Recent Trips</h3>
+            {/* Top vehicles by distance */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Top Movers
+                </h3>
+                <TrendingUp className="h-5 w-5 text-slate-400" />
+              </div>
+              <div className="space-y-2 text-xs">
+                {topVehiclesByDistance.map((v) => (
+                  <div
+                    key={v.id}
+                    className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"
+                  >
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        {v.vehicle_number}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {v.makeModel}
+                      </p>
+                    </div>
+                    <p className="text-[11px] font-semibold text-indigo-600">
+                      {v.distance.toFixed(0)} km
+                    </p>
+                  </div>
+                ))}
+                {topVehiclesByDistance.length === 0 && (
+                  <p className="py-6 text-center text-slate-400">
+                    No trip data yet.
+                  </p>
+                )}
+              </div>
+            </div>
 
-              <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
-                {trips.slice(0, 5).map((trip) => {
-                  const vehicle = vehicles.find((v) => v.id === trip.vehicle_id);
+            {/* Recent trips */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Recent Trips
+                </h3>
+                <MapPin className="h-5 w-5 text-slate-400" />
+              </div>
+              <div className="max-h-52 space-y-2 overflow-y-auto pr-1 text-xs">
+                {recentTrips.map((trip: AnyTrip) => {
+                  const vehicle = vehicles.find(
+                    (v: AnyVehicle) => v.id === trip.vehicle_id
+                  );
                   const distance =
                     (trip.end_mileage ?? 0) - (trip.start_mileage ?? 0);
 
                   return (
                     <div
                       key={trip.id}
-                      className="flex justify-between items-center p-3 border rounded-xl hover:shadow-sm transition"
+                      className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
                     >
                       <div>
-                        <p className="font-semibold text-sm">
+                        <p className="font-semibold text-slate-900">
                           {trip.start_location} → {trip.end_location}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-[11px] text-slate-500">
                           {vehicle?.vehicle_number || "Unknown"} •{" "}
                           {format(new Date(trip.trip_date), "MMM dd")}
                         </p>
                       </div>
-
                       <div className="text-right">
-                        <p className="font-semibold">{distance} km</p>
-
-                        {/* FIXED: No syntax error */}
-                        <p className="text-xs text-gray-500">
+                        <p className="text-[11px] font-semibold text-slate-900">
+                          {distance} km
+                        </p>
+                        <p className="text-[11px] text-slate-500">
                           {trip.fuel_consumed
                             ? `${trip.fuel_consumed} L`
                             : "-"}
@@ -385,9 +686,9 @@ export default function Dashboard() {
                   );
                 })}
 
-                {trips.length === 0 && (
-                  <div className="text-center text-gray-400 py-6">
-                    No trips recorded
+                {recentTrips.length === 0 && (
+                  <div className="py-6 text-center text-slate-400">
+                    No trips recorded yet.
                   </div>
                 )}
               </div>
@@ -396,44 +697,57 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* REMINDERS */}
-      <div className="bg-white p-5 rounded-2xl shadow-sm border">
-        <h3 className="font-semibold mb-4">Upcoming Reminders</h3>
+      {/* REMINDERS STRIP */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">
+              Upcoming Reminders
+            </h3>
+            <p className="text-xs text-slate-500">
+              Service / insurance due in the next 30 days
+            </p>
+          </div>
+          <Wrench className="h-5 w-5 text-slate-400" />
+        </div>
 
         <div className="space-y-3">
-          {upcomingReminders.map((v) => (
+          {upcomingReminders.map((v: AnyVehicle) => (
             <div
               key={v.id}
-              className="flex justify-between items-center p-3 border rounded-xl hover:shadow-sm transition"
+              className="flex items-center justify-between rounded-xl border border-amber-100 bg-amber-50 px-3 py-3"
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <img
                   src={vehicleImageFor(v)}
                   alt=""
-                  className="w-16 h-12 rounded-lg object-cover"
+                  className="h-10 w-16 rounded-lg object-cover"
                 />
                 <div>
-                  <p className="font-semibold">{v.vehicle_number}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-semibold text-slate-900">
+                    {v.vehicle_number}
+                  </p>
+                  <p className="text-[11px] text-slate-500">
                     {v.make} {v.model}
                   </p>
                 </div>
               </div>
-
               <div className="text-right">
-                <p className="font-semibold text-yellow-600">Due Soon</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs font-semibold text-amber-700">
+                  Due Soon
+                </p>
+                <p className="text-[11px] text-slate-500">
                   {v.service_due_date
                     ? format(parseISO(v.service_due_date), "MMM dd, yyyy")
-                    : "No date"}
+                    : "No service date"}
                 </p>
               </div>
             </div>
           ))}
 
           {upcomingReminders.length === 0 && (
-            <div className="text-center text-gray-400 py-8">
-              No reminders
+            <div className="py-6 text-center text-slate-400">
+              Everything looks good. No reminders right now.
             </div>
           )}
         </div>
