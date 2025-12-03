@@ -234,3 +234,37 @@ exports.getMyVehicle = async (req, res) => {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+// ---------------------- DELETE DRIVER ----------------------
+exports.deleteDriver = async (req, res) => {
+  try {
+    const driverId = req.params.id;
+
+    const driver = await Driver.findById(driverId);
+    if (!driver) return res.status(404).json({ message: "Driver not found" });
+
+    // Check owner/admin access
+    if (req.user.role !== "admin" && driver.ownerId.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const Vehicle = require("../models/Vehicle");
+
+    // Remove driver from any assigned vehicle
+    if (driver.assignedVehicle) {
+      await Vehicle.findByIdAndUpdate(driver.assignedVehicle, {
+        $unset: { currentDriver: "" }
+      });
+    }
+
+    // Delete linked user account
+    await User.findByIdAndDelete(driver.userId);
+
+    // Delete driver profile
+    await Driver.findByIdAndDelete(driverId);
+
+    return res.json({ message: "Driver deleted successfully" });
+  } catch (error) {
+    console.error("[DELETE_DRIVER] Error:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
