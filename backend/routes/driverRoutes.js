@@ -1,12 +1,33 @@
-const express = require('express');
+// backend/routes/driverRoutes.js
+const express = require("express");
 const router = express.Router();
-const { addDriver, getDrivers, assignVehicle, getMyVehicle, updateDriver } = require('../controllers/driverController');
-const auth = require('../middleware/authMiddleware');
+const auth = require("../middleware/authMiddleware");
+const {
+  addDriver,
+  updateDriver,
+  getDrivers,
+  assignVehicle,
+  getMyVehicle,
+} = require("../controllers/driverController");
 
-router.get('/me/vehicle', auth(['driver']), getMyVehicle);
-router.post('/', auth(['admin', 'fleet_owner']), addDriver);
-router.get('/', auth(['admin', 'fleet_owner']), getDrivers);
-router.put('/:id', auth(['admin', 'fleet_owner']), updateDriver);
-router.post('/assign', auth(['admin', 'fleet_owner']), assignVehicle);
+// Roles allowed to manage drivers
+const OWNER_ROLES = ["admin", "fleet_owner"];
+
+// Get all drivers for current owner/admin
+router.get("/", auth(OWNER_ROLES), getDrivers);
+
+// Add a new driver
+// Frontend can call either POST /api/drivers or POST /api/drivers/add
+router.post("/", auth(OWNER_ROLES), addDriver);
+router.post("/add", auth(OWNER_ROLES), addDriver); // alias, just in case
+
+// Update existing driver
+router.put("/:id", auth(OWNER_ROLES), updateDriver);
+
+// Assign vehicle to driver
+router.post("/assign", auth(OWNER_ROLES), assignVehicle);
+
+// Driver’s own vehicle info
+router.get("/my-vehicle", auth(["driver"]), getMyVehicle);
 
 module.exports = router;
