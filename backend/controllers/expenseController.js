@@ -7,8 +7,11 @@ exports.addExpense = async (req, res) => {
         const { vehicleId, type, amount, description, date } = req.body;
 
         let receiptUrl = '';
+
+        // Build absolute URL for uploaded file
         if (req.file) {
-            receiptUrl = `/uploads/${req.file.filename}`;
+            const baseUrl = process.env.BASE_URL || "http://localhost:5000";
+            receiptUrl = `${baseUrl}/uploads/${req.file.filename}`;
         }
 
         const expense = new Expense({
@@ -22,6 +25,7 @@ exports.addExpense = async (req, res) => {
         });
 
         await expense.save();
+
         res.status(201).json({ message: 'Expense added', expense });
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -32,6 +36,7 @@ exports.addExpense = async (req, res) => {
 exports.getExpenses = async (req, res) => {
     try {
         let query = {};
+
         if (req.query.vehicleId) {
             query.vehicleId = req.query.vehicleId;
         } else if (req.user.role === 'driver') {
@@ -47,6 +52,7 @@ exports.getExpenses = async (req, res) => {
             .populate('vehicleId', 'registrationNumber')
             .populate('loggedBy', 'name')
             .sort({ date: -1 });
+
         res.json(expenses);
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error: error.message });
