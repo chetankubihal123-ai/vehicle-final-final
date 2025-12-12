@@ -2,22 +2,45 @@ const express = require('express');
 const router = express.Router();
 const { addExpense, getExpenses } = require('../controllers/expenseController');
 const auth = require('../middleware/authMiddleware');
-
 const multer = require('multer');
 const path = require('path');
 
+// Store files inside backend/uploads
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, "..", "uploads"));
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, Date.now() + ext);
+  }
 });
 
-const upload = multer({ storage: storage });
+// Accept only images
+const fileFilter = (req, file, cb) => {
+  const allowed = /png|jpg|jpeg|webp/;
+  const extOK = allowed.test(path.extname(file.originalname).toLowerCase());
+  const mimeOK = allowed.test(file.mimetype);
 
-router.post('/', auth(['fleet_owner', 'admin', 'driver']), upload.single('receipt'), addExpense);
-router.get('/', auth(['fleet_owner', 'admin', 'driver']), getExpenses);
+  if (extOK && mimeOK) cb(null, true);
+  else cb(new Error("Only images allowed"), false);
+};
+
+const upload = multer({ storage, fileFilter });
+
+// POST /api/expenses
+router.post(
+  '/',
+  auth(['fleet_owner', 'admin', 'driver']),
+  upload.single('receipt'),
+  addExpense
+);
+
+// GET /api/expenses
+router.get(
+  '/',
+  auth(['fleet_owner', 'admin', 'driver']),
+  getExpenses
+);
 
 module.exports = router;

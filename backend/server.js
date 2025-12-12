@@ -23,6 +23,8 @@ app.use(
   })
 );
 
+const path = require("path");
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Database Connection
 mongoose
@@ -36,7 +38,6 @@ mongoose
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/vehicles", require("./routes/vehicleRoutes"));
 app.use("/api/drivers", require("./routes/driverRoutes"));
-app.use("/uploads", express.static("uploads"));
 app.use("/api/trips", require("./routes/tripRoutes"));
 app.use("/api/expenses", require("./routes/expenseRoutes"));
 app.use("/api/location", require("./routes/locationRoutes"));
