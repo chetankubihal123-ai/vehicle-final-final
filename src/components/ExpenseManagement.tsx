@@ -1,361 +1,198 @@
 import React, { useState, useEffect } from "react";
-import { Plus, DollarSign, Receipt, Filter } from "lucide-react";
-import { useVehicles } from "../hooks/useVehicles";
-import { Expense } from "../types";
-import { format, parseISO } from "date-fns";
-import { useAuth } from "../contexts/AuthContext";
+import { Plus, DollarSign, Receipt } from "lucide-react";
 import axios from "axios";
+import { useAuth } from "../contexts/AuthContext";
+import { format, parseISO } from "date-fns";
 
 export default function ExpenseManagement() {
   const { user } = useAuth();
-  const { vehicles, expenses } = useVehicles();
-
+  const [expenses, setExpenses] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [filterCategory, setFilterCategory] = useState<string>("all");
-
   const [formData, setFormData] = useState({
-    vehicle_id: "",
-    category: "fuel" as Expense["category"],
-    amount: 0,
+    vehicleId: "",
+    type: "fuel",
+    amount: "",
     description: "",
-    expense_date: format(new Date(), "yyyy-MM-dd"),
-    receipt: null as File | null,
+    date: format(new Date(), "yyyy-MM-dd"),
+    receipt: null as File | null
   });
 
-  const [assignedVehicle, setAssignedVehicle] = useState<any>(null);
+  const BACKEND = "https://vehicle-final.onrender.com";
 
+  // FETCH VEHICLES
   useEffect(() => {
-    if (user?.role === "driver") {
-      const fetchMyVehicle = async () => {
-        try {
-          const res = await axios.get("/drivers/me/vehicle");
-          if (res.data.vehicle) {
-            setAssignedVehicle(res.data.vehicle);
-            setFormData((prev) => ({ ...prev, vehicle_id: res.data.vehicle._id }));
-          }
-        } catch (err) {
-          console.error("Error fetching assigned vehicle:", err);
-        }
-      };
-      fetchMyVehicle();
-    }
-  }, [user]);
+    axios.get("/vehicles").then((res) => setVehicles(res.data));
+  }, []);
 
+  // FETCH EXPENSES
   useEffect(() => {
-    if (vehicles.length === 1) {
-      setFormData((prev) => ({ ...prev, vehicle_id: vehicles[0].id }));
-    }
-  }, [vehicles]);
+    axios.get("/expenses").then((res) => setExpenses(res.data));
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
-    if (!user) return;
 
-    try {
-      const formDataToSend = new FormData();
-      formDataToSend.append("vehicleId", formData.vehicle_id);
-      formDataToSend.append("type", formData.category);
-      formDataToSend.append("amount", formData.amount.toString());
-      formDataToSend.append("description", formData.description);
-      formDataToSend.append("date", formData.expense_date);
+    const fd = new FormData();
+    fd.append("vehicleId", formData.vehicleId);
+    fd.append("type", formData.type);
+    fd.append("amount", formData.amount);
+    fd.append("description", formData.description);
+    fd.append("date", formData.date);
+    if (formData.receipt) fd.append("receipt", formData.receipt);
 
-      if (formData.receipt) {
-        formDataToSend.append("receipt", formData.receipt);
-      }
+    await axios.post("/expenses", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
 
-      await axios.post("/expenses", formDataToSend, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      window.location.reload();
-    } catch (err) {
-      console.error("Error adding expense:", err);
-    }
-  };
-
-  const filteredExpenses =
-    filterCategory === "all"
-      ? expenses
-      : expenses.filter((exp) => exp.category === filterCategory);
-
-  const getCategoryColor = (category: Expense["category"]) => {
-    switch (category) {
-      case "fuel":
-        return "bg-blue-100 text-blue-800";
-      case "maintenance":
-        return "bg-green-100 text-green-800";
-      case "insurance":
-        return "bg-purple-100 text-purple-800";
-      case "permit":
-        return "bg-yellow-100 text-yellow-800";
-      case "toll":
-        return "bg-orange-100 text-orange-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const ExpenseCard = ({ expense }: { expense: Expense }) => {
-    const vehicle = vehicles.find((v) => v.id === expense.vehicle_id);
-    const Icon = DollarSign;
-
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div
-              className={`p-2 rounded-lg ${getCategoryColor(expense.category)
-                .replace("text-", "bg-")
-                .replace("800", "100")}`}
-            >
-              <Icon
-                className={`h-6 w-6 ${getCategoryColor(expense.category)
-                  .replace("bg-", "text-")
-                  .replace("100", "600")}`}
-              />
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-gray-900 text-lg">
-                {expense.description}
-              </h3>
-              <p className="text-gray-600">
-                {vehicle?.vehicle_number}
-                {expense.logged_by_name && ` • ${expense.logged_by_name}`}
-                {` • ${format(parseISO(expense.expense_date), "MMM dd, yyyy")}`}
-              </p>
-            </div>
-          </div>
-
-          <div className="text-right">
-            <p className="text-xl font-bold text-gray-900">
-              ₹{expense.amount.toLocaleString()}
-            </p>
-            <span
-              className={`inline-flex px-2 py-1 rounded-full text-xs font-medium capitalize ${getCategoryColor(
-                expense.category
-              )}`}
-            >
-              {expense.category}
-            </span>
-          </div>
-        </div>
-
-        {expense.receiptUrl && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-sm text-gray-600 mb-2">Receipt:</p>
-
-            <img
-              src={expense.receiptUrl}
-              alt="Receipt"
-              className="max-w-xs rounded-lg border cursor-pointer hover:opacity-90"
-              onClick={() => window.open(expense.receiptUrl, "_blank")}
-            />
-          </div>
-        )}
-      </div>
-    );
+    window.location.reload();
   };
 
   return (
     <div className="p-6 space-y-6">
+      {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Expense Management</h1>
-          <p className="text-gray-600 mt-1">Track and manage vehicle expenses</p>
+          <h1 className="text-2xl font-bold">Expense Management</h1>
+          <p className="text-gray-600">Track and manage vehicle expenses</p>
         </div>
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2"
+          className="bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
         >
           <Plus className="h-5 w-5" />
           <span>Add Expense</span>
         </button>
       </div>
 
-      {/* FILTER */}
-      <div className="bg-white rounded-xl p-4 border shadow-sm flex items-center space-x-4">
-        <Filter className="h-5 w-5 text-gray-400" />
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="px-3 py-2 border rounded-lg"
-        >
-          <option value="all">All</option>
-          <option value="fuel">Fuel</option>
-          <option value="maintenance">Maintenance</option>
-          <option value="insurance">Insurance</option>
-          <option value="permit">Permit</option>
-          <option value="toll">Toll</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-
       {/* EXPENSE LIST */}
       <div className="space-y-4">
-        {filteredExpenses.map((expense) => (
-          <ExpenseCard key={expense.id} expense={expense} />
-        ))}
+        {expenses.map((expense: any) => (
+          <div
+            key={expense._id}
+            className="bg-white rounded-xl border p-5 shadow-sm hover:shadow-md transition"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-lg">{expense.type}</h2>
+                <p className="text-gray-600 text-sm">
+                  {expense.vehicleId?.registrationNumber} •{" "}
+                  {expense.loggedBy?.name} •{" "}
+                  {format(parseISO(expense.date), "MMM dd, yyyy")}
+                </p>
+              </div>
 
-        {filteredExpenses.length === 0 && (
-          <div className="text-center py-12">
-            <Receipt className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">No expenses found</p>
+              <div className="text-right">
+                <p className="text-xl font-bold">₹{expense.amount}</p>
+                <span className="px-2 py-1 bg-gray-100 rounded-full text-xs">
+                  {expense.type}
+                </span>
+              </div>
+            </div>
+
+            {expense.receiptUrl && (
+              <div className="mt-2 pt-2 border-t">
+                <p className="text-sm text-gray-600 mb-1">Receipt:</p>
+                <img
+                  src={`${BACKEND}${expense.receiptUrl}`}
+                  alt="receipt"
+                  className="w-40 border rounded cursor-pointer"
+                  onClick={() =>
+                    window.open(`${BACKEND}${expense.receiptUrl}`, "_blank")
+                  }
+                />
+              </div>
+            )}
           </div>
-        )}
+        ))}
       </div>
 
       {/* ADD EXPENSE MODAL */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white w-full max-w-lg rounded-xl shadow-xl p-6">
+            <h2 className="text-xl font-semibold mb-4">Add New Expense</h2>
 
-            <div className="p-6 border-b">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Add New Expense
-              </h2>
-            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <select
+                required
+                value={formData.vehicleId}
+                onChange={(e) =>
+                  setFormData({ ...formData, vehicleId: e.target.value })
+                }
+                className="w-full p-2 border rounded"
+              >
+                <option value="">Select Vehicle</option>
+                {vehicles.map((v: any) => (
+                  <option key={v._id} value={v._id}>
+                    {v.registrationNumber}
+                  </option>
+                ))}
+              </select>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {/* VEHICLE */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Vehicle
-                </label>
-                <select
-                  required
-                  value={formData.vehicle_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, vehicle_id: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg"
-                  disabled={user?.role === "driver" && assignedVehicle}
-                >
-                  <option value="">Select vehicle</option>
+              <select
+                value={formData.type}
+                onChange={(e) =>
+                  setFormData({ ...formData, type: e.target.value })
+                }
+                className="w-full p-2 border rounded"
+              >
+                <option value="fuel">Fuel</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="toll">Toll</option>
+                <option value="other">Other</option>
+              </select>
 
-                  {user?.role === "driver" && assignedVehicle ? (
-                    <option value={assignedVehicle._id}>
-                      {assignedVehicle.registrationNumber} -{" "}
-                      {assignedVehicle.make} {assignedVehicle.model}
-                    </option>
-                  ) : (
-                    vehicles.map((vehicle) => (
-                      <option key={vehicle.id} value={vehicle.id}>
-                        {vehicle.vehicle_number} - {vehicle.make}{" "}
-                        {vehicle.model}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
+              <input
+                type="number"
+                placeholder="Amount"
+                value={formData.amount}
+                onChange={(e) =>
+                  setFormData({ ...formData, amount: e.target.value })
+                }
+                className="w-full p-2 border rounded"
+              />
 
-              {/* CATEGORY */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      category: e.target.value as Expense["category"],
-                    })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg"
-                >
-                  <option value="fuel">Fuel</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="insurance">Insurance</option>
-                  <option value="permit">Permit</option>
-                  <option value="toll">Toll</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) =>
+                  setFormData({ ...formData, date: e.target.value })
+                }
+                className="w-full p-2 border rounded"
+              />
 
-              {/* AMOUNT */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Amount (₹)
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  step="0.01"
-                  value={formData.amount}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      amount: Number(e.target.value),
-                    })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
+              <textarea
+                placeholder="Description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                className="w-full p-2 border rounded"
+              />
 
-              {/* DATE */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Expense Date
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={formData.expense_date}
-                  onChange={(e) =>
-                    setFormData({ ...formData, expense_date: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) =>
+                  setFormData({ ...formData, receipt: e.target.files?.[0] || null })
+                }
+                className="w-full p-2 border rounded"
+              />
 
-              {/* DESCRIPTION */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea
-                  required
-                  rows={3}
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="e.g., Fuel refill at pump"
-                />
-              </div>
-
-              {/* RECEIPT UPLOAD */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Bill Photo (Optional)
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setFormData({ ...formData, receipt: e.target.files[0] });
-                    }
-                  }}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex justify-end space-x-3">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-gray-600"
+                  className="px-4 py-2 text-gray-700"
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
-                  className="bg-purple-600 text-white px-6 py-2 rounded-lg"
+                  className="px-5 py-2 bg-purple-600 text-white rounded-lg"
                 >
                   Add Expense
                 </button>
