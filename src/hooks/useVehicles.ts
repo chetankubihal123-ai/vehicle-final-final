@@ -10,99 +10,50 @@ export function useVehicles() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // -----------------------------
-  // Mapping functions
-  // -----------------------------
   const mapVehicle = (item: any): Vehicle => ({
     id: item._id || item.id,
     owner_id: item.ownerId,
     vehicle_number: item.registrationNumber,
-    vehicle_type: (item.type?.toLowerCase() as any) || "car",
-    make: item.make || "",
-    model: item.model || "",
-    year: item.year || new Date().getFullYear(),
-    fuel_type: (item.fuelType?.toLowerCase() as any) || "petrol",
-    current_mileage: item.currentMileage || 0,
+    vehicle_type: item.type?.toLowerCase() || "car",
+    make: item.make,
+    model: item.model,
+    year: item.year,
+    fuel_type: item.fuelType,
+    current_mileage: item.currentMileage,
     insurance_expiry: item.insuranceExpiry,
     service_due_date: item.serviceDate,
     permit_expiry: item.permitExpiry,
-    assigned_driver_id: item.currentDriver?._id || item.currentDriver,
-    status: (item.status || "active") as any,
+    assigned_driver_id: item.currentDriver,
+    status: item.status || "active",
     created_at: item.createdAt,
-  });
-
-  const mapTrip = (item: any): Trip => ({
-    id: item._id || item.id,
-    vehicle_id: item.vehicleId?._id || item.vehicleId,
-    driver_id: item.driverId?._id || item.driverId,
-    driver_name: item.driverId?.userId?.name || "Unknown",
-    start_mileage: item.startMileage || 0,
-    end_mileage:
-      item.endMileage || item.startMileage + (item.distance || 0) || 0,
-    start_location:
-      typeof item.startLocation === "string"
-        ? item.startLocation
-        : item.startLocation
-        ? `${item.startLocation.lat}, ${item.startLocation.lng}`
-        : "",
-    start_location_lat: item.startLocationLat || "",
-    start_location_lon: item.startLocationLon || "",
-    end_location:
-      typeof item.endLocation === "string"
-        ? item.endLocation
-        : item.endLocation
-        ? `${item.endLocation.lat}, ${item.endLocation.lng}`
-        : "",
-    end_location_lat: item.endLocationLat || "",
-    end_location_lon: item.endLocationLon || "",
-    trip_date: item.startTime,
-    trip_purpose: item.purpose || "",
-    created_at: item.createdAt,
-    fuel_consumed: item.fuelConsumed || 0,
-    goods_carried: "",
   });
 
   const mapExpense = (item: any): Expense => ({
-    id: item._id || item.id,
+    id: item._id,
     vehicle_id: item.vehicleId?._id || item.vehicleId,
-    user_id: item.loggedBy?._id || item.loggedBy,
+    user_id: item.loggedBy?._id,
     logged_by_name: item.loggedBy?.name || "Unknown",
-    category: (item.type?.toLowerCase() as any) || "other",
+    category: item.type?.toLowerCase(),
     amount: item.amount,
-    description: item.description || "",
+    description: item.description,
     expense_date: item.date,
     created_at: item.createdAt,
-    receipt_url: item.receiptUrl || "",
+    receipt_url: item.receiptUrl,
   });
 
-  // -----------------------------
-  // FETCH ALL DATA
-  // -----------------------------
   const fetchData = async () => {
     if (!user) return;
     setLoading(true);
     try {
       const [vehiclesRes, tripsRes, expensesRes] = await Promise.all([
-        axios.get("/vehicles"),
-        axios.get("/trips"),
-        axios.get("/expenses"),
+        axios.get("/api/vehicles"),
+        axios.get("/api/trips"),
+        axios.get("/api/expenses"),
       ]);
 
-      setVehicles(
-        Array.isArray(vehiclesRes.data)
-          ? vehiclesRes.data.map(mapVehicle)
-          : []
-      );
-      setTrips(
-        Array.isArray(tripsRes.data) ? tripsRes.data.map(mapTrip) : []
-      );
-      setExpenses(
-        Array.isArray(expensesRes.data)
-          ? expensesRes.data.map(mapExpense)
-          : []
-      );
-    } catch (error) {
-      console.error("Error fetching data:", error);
+      setVehicles(vehiclesRes.data.map(mapVehicle));
+      setTrips(tripsRes.data.map((t: any) => t));
+      setExpenses(expensesRes.data.map(mapExpense));
     } finally {
       setLoading(false);
     }
@@ -112,121 +63,11 @@ export function useVehicles() {
     fetchData();
   }, [user]);
 
-  // -----------------------------
-  // ADD VEHICLE
-  // -----------------------------
-  const addVehicle = async (vehicle: Omit<Vehicle, "id" | "created_at">) => {
-    try {
-      const res = await axios.post("/vehicles", {
-        registrationNumber: vehicle.vehicle_number,
-        model: vehicle.model,
-        type: vehicle.vehicle_type,
-        serviceDate: vehicle.service_due_date,
-        insuranceExpiry: vehicle.insurance_expiry,
-        permitExpiry: vehicle.permit_expiry,
-        make: vehicle.make,
-        year: vehicle.year,
-        fuelType: vehicle.fuel_type,
-        currentMileage: vehicle.current_mileage,
-      });
-
-      fetchData();
-      return res.data;
-    } catch (error) {
-      console.error("Error adding vehicle:", error);
-      throw error;
-    }
-  };
-
-  // -----------------------------
-  // EDIT VEHICLE
-  // -----------------------------
-  const editVehicle = async (updatedVehicle: Vehicle) => {
-    try {
-      await axios.put(`/vehicles/${updatedVehicle.id}`, {
-        registrationNumber: updatedVehicle.vehicle_number,
-        model: updatedVehicle.model,
-        type: updatedVehicle.vehicle_type,
-        serviceDate: updatedVehicle.service_due_date,
-        insuranceExpiry: updatedVehicle.insurance_expiry,
-        permitExpiry: updatedVehicle.permit_expiry,
-        make: updatedVehicle.make,
-        year: updatedVehicle.year,
-        fuelType: updatedVehicle.fuel_type,
-        currentMileage: updatedVehicle.current_mileage,
-      });
-
-      fetchData();
-    } catch (error) {
-      console.error("Error updating vehicle:", error);
-      throw error;
-    }
-  };
-
-  // -----------------------------
-  // DELETE VEHICLE  (NEW)
-  // -----------------------------
-  const deleteVehicle = async (id: string) => {
-    try {
-      await axios.delete(`/vehicles/${id}`);
-      setVehicles((prev) => prev.filter((v) => v.id !== id));
-    } catch (error) {
-      console.error("Error deleting vehicle:", error);
-      throw error;
-    }
-  };
-
-  // -----------------------------
-  // ADD TRIP
-  // -----------------------------
-  const addTrip = async (trip: Omit<Trip, "id" | "created_at">) => {
-    try {
-      await axios.post("/trips", {
-        vehicleId: trip.vehicle_id,
-        startLocation: trip.start_location,
-        endLocation: trip.end_location,
-        startMileage: trip.start_mileage,
-        endMileage: trip.end_mileage,
-        tripDate: trip.trip_date,
-        fuelConsumed: trip.fuel_consumed,
-        purpose: trip.trip_purpose,
-      });
-      fetchData();
-    } catch (error) {
-      console.error("Error adding trip:", error);
-      throw error;
-    }
-  };
-
-  // -----------------------------
-  // ADD EXPENSE
-  // -----------------------------
-  const addExpense = async (expense: Omit<Expense, "id" | "created_at">) => {
-    try {
-      await axios.post("/expenses", {
-        vehicleId: expense.vehicle_id,
-        type: expense.category,
-        amount: expense.amount,
-        description: expense.description,
-        date: expense.expense_date,
-      });
-      fetchData();
-    } catch (error) {
-      console.error("Error adding expense:", error);
-      throw error;
-    }
-  };
-
   return {
     vehicles,
     trips,
     expenses,
     loading,
-    addVehicle,
-    editVehicle,
-    deleteVehicle, // <-- IMPORTANT EXPORT
-    addTrip,
-    addExpense,
     refreshData: fetchData,
   };
 }

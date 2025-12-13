@@ -1,46 +1,42 @@
 const express = require("express");
 const router = express.Router();
-const { addExpense, getExpenses } = require("../controllers/expenseController");
+const {
+  addExpense,
+  getExpenses,
+  deleteExpense,
+} = require("../controllers/expenseController");
 const auth = require("../middleware/authMiddleware");
+
 const multer = require("multer");
 const path = require("path");
 
-// Define storage for uploaded images
+// Upload Folder
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, path.join(__dirname, "..", "uploads"));
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, Date.now() + ext);
-  }
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
 });
 
-// Allow only images
 const fileFilter = (req, file, cb) => {
   const allowed = /png|jpg|jpeg|webp/;
-  const extOK = allowed.test(path.extname(file.originalname).toLowerCase());
-  const mimeOK = allowed.test(file.mimetype);
-
-  if (extOK && mimeOK) cb(null, true);
-  else cb(new Error("Only images allowed"), false);
+  const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+  const mime = allowed.test(file.mimetype);
+  if (ext && mime) cb(null, true);
+  else cb(new Error("Only images allowed"));
 };
 
 const upload = multer({ storage, fileFilter });
 
-// POST: Add new expense with optional receipt
-router.post(
-  "/",
-  auth(["fleet_owner", "admin", "driver"]),
-  upload.single("receipt"),
-  addExpense
-);
+// CREATE
+router.post("/", auth(["admin", "fleet_owner", "driver"]), upload.single("receipt"), addExpense);
 
-// GET: Fetch expenses
-router.get(
-  "/",
-  auth(["fleet_owner", "admin", "driver"]),
-  getExpenses
-);
+// READ
+router.get("/", auth(["admin", "fleet_owner", "driver"]), getExpenses);
+
+// DELETE
+router.delete("/:id", auth(["admin", "fleet_owner", "driver"]), deleteExpense);
 
 module.exports = router;
