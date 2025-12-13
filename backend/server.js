@@ -6,15 +6,19 @@ const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
+const path = require("path");
 
 const app = express();
 
-// Middleware
+// -----------------------------
+// MIDDLEWARE
+// -----------------------------
 app.use(express.json());
+
 app.use(
   cors({
     origin: [
-      "https://vehicle-final-final-1.onrender.com",
+      "https://vehicle-final-final-1.onrender.com", // frontend.
       "http://localhost:5173"
     ],
     credentials: true,
@@ -23,10 +27,14 @@ app.use(
   })
 );
 
-const path = require("path");
+// -----------------------------
+// SERVE UPLOADED FILES (IMPORTANT FOR RECEIPTS)
+// -----------------------------
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Database Connection
+// -----------------------------
+// MONGO CONNECTION
+// -----------------------------
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
@@ -34,7 +42,9 @@ mongoose
     console.error("MongoDB connection failed:", err.message);
   });
 
-// Routes
+// -----------------------------
+// ROUTES
+// -----------------------------
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/vehicles", require("./routes/vehicleRoutes"));
 app.use("/api/drivers", require("./routes/driverRoutes"));
@@ -42,37 +52,32 @@ app.use("/api/trips", require("./routes/tripRoutes"));
 app.use("/api/expenses", require("./routes/expenseRoutes"));
 app.use("/api/location", require("./routes/locationRoutes"));
 
-// Start Cron Jobs
+// Cron service
 require("./services/reminderService");
 
 app.get("/", (req, res) => {
   res.send("Vehicle Management System API is running");
 });
 
-// -------------------------------
-// Create HTTP server BEFORE Socket.IO
-// -------------------------------
+// -----------------------------
+// HTTP SERVER + SOCKET.IO
+// -----------------------------
 const server = http.createServer(app);
 
-// -------------------------------
-// Socket.IO Initialization
-// -------------------------------
 const io = new Server(server, {
   cors: {
     origin: [
       "https://vehicle-final-final-1.onrender.com",
       "http://localhost:5173"
     ],
+    credentials: true,
     methods: ["GET", "POST"],
-    credentials: true
   }
 });
 
-// Models
-const LiveLocation = require("./models/LiveLocation");
-const RouteHistory = require("./models/RouteHistory");
-
-// Socket auth middleware
+// -----------------------------
+// SOCKET.IO AUTH MIDDLEWARE
+// -----------------------------
 io.use((socket, next) => {
   try {
     const authHeader = socket.handshake.headers.authorization;
@@ -82,23 +87,25 @@ io.use((socket, next) => {
         : null;
 
     const token = socket.handshake.auth?.token || tokenFromHeader;
-
-    if (!token) {
-      return next(new Error("Authentication error: no token"));
-    }
+    if (!token) return next(new Error("No token provided"));
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     socket.user = decoded;
     next();
   } catch (err) {
     console.error("Socket auth error:", err.message);
-    next(new Error("Authentication error"));
+    next(new Error("Authentication failed"));
   }
 });
 
-// Socket handlers
+// -----------------------------
+// SOCKET.IO HANLDERS
+// -----------------------------
+const LiveLocation = require("./models/LiveLocation");
+const RouteHistory = require("./models/RouteHistory");
+
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.id, "role:", socket.user?.role);
+  console.log("Socket connected:", socket.id, "role:", socket.user?.role);
 
   socket.on("join_vehicle", async (vehicleId) => {
     try {
@@ -137,8 +144,9 @@ io.on("connection", (socket) => {
         }));
         socket.emit("receive_route_history", routePoints);
       }
+
     } catch (err) {
-      console.error("Error in join_vehicle:", err);
+      console.error("join_vehicle error:", err);
     }
   });
 
@@ -166,14 +174,7 @@ io.on("connection", (socket) => {
 
       await LiveLocation.findOneAndUpdate(
         { vehicleId },
-        {
-          vehicleId,
-          driverId,
-          lat,
-          lng,
-          speed: spd,
-          timestamp: ts,
-        },
+        { vehicleId, driverId, lat, lng, speed: spd, timestamp: ts },
         { upsert: true, new: true }
       );
 
@@ -181,28 +182,29 @@ io.on("connection", (socket) => {
       startOfDay.setHours(0, 0, 0, 0);
 
       await RouteHistory.findOneAndUpdate(
-        {
-          vehicleId,
-          createdAt: { $gte: startOfDay },
-        },
+        { vehicleId, createdAt: { $gte: startOfDay } },
         {
           $setOnInsert: { vehicleId, driverId },
           $push: { locations: { lat, lng, timestamp: ts, speed: spd } },
         },
         { upsert: true, new: true }
       );
+
     } catch (err) {
-      console.error("Error in send_location:", err);
+      console.error("send_location error:", err);
     }
   });
 
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+    console.log("Socket disconnected:", socket.id);
   });
 });
 
-// Start Server
+// -----------------------------
+// START SERVER
+// -----------------------------
 const PORT = process.env.PORT || 5000;
+
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 });

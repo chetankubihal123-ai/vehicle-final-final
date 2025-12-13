@@ -6,11 +6,11 @@ exports.addExpense = async (req, res) => {
     try {
         const { vehicleId, type, amount, description, date } = req.body;
 
-        let receiptUrl = '';
+        let receiptUrl = "";
 
-        // Build absolute URL for uploaded file
+        // When a file is uploaded, store the full URL
         if (req.file) {
-            const baseUrl = process.env.BASE_URL || "http://localhost:5000";
+            const baseUrl = process.env.BASE_URL || "https://vehicle-final.onrender.com";
             receiptUrl = `${baseUrl}/uploads/${req.file.filename}`;
         }
 
@@ -26,9 +26,14 @@ exports.addExpense = async (req, res) => {
 
         await expense.save();
 
-        res.status(201).json({ message: 'Expense added', expense });
+        res.status(201).json({
+            message: "Expense added successfully",
+            expense
+        });
+
     } catch (error) {
-        res.status(500).json({ message: 'Server Error', error: error.message });
+        console.error("Expense Add Error:", error);
+        res.status(500).json({ message: "Server Error", error: error.message });
     }
 };
 
@@ -39,22 +44,24 @@ exports.getExpenses = async (req, res) => {
 
         if (req.query.vehicleId) {
             query.vehicleId = req.query.vehicleId;
-        } else if (req.user.role === 'driver') {
+
+        } else if (req.user.role === "driver") {
             query.loggedBy = req.user.id;
-        } else if (req.user.role === 'fleet_owner') {
-            // Owners see expenses for their vehicles
-            const vehicles = await Vehicle.find({ ownerId: req.user.id }).select('_id');
-            const vehicleIds = vehicles.map(v => v._id);
-            query.vehicleId = { $in: vehicleIds };
+
+        } else if (req.user.role === "fleet_owner") {
+            const vehicles = await Vehicle.find({ ownerId: req.user.id }).select("_id");
+            query.vehicleId = { $in: vehicles.map(v => v._id) };
         }
 
         const expenses = await Expense.find(query)
-            .populate('vehicleId', 'registrationNumber')
-            .populate('loggedBy', 'name')
+            .populate("vehicleId", "registrationNumber")
+            .populate("loggedBy", "name")
             .sort({ date: -1 });
 
         res.json(expenses);
+
     } catch (error) {
-        res.status(500).json({ message: 'Server Error', error: error.message });
+        console.error("Expense Fetch Error:", error);
+        res.status(500).json({ message: "Server Error", error: error.message });
     }
 };

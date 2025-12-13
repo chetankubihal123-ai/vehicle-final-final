@@ -12,7 +12,6 @@ export default function ExpenseManagement() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [filterCategory, setFilterCategory] = useState("all");
-
   const [assignedVehicle, setAssignedVehicle] = useState<any>(null);
 
   const [formData, setFormData] = useState({
@@ -24,9 +23,7 @@ export default function ExpenseManagement() {
     receipt: null as File | null,
   });
 
-  const BACKEND = "https://vehicle-final.onrender.com";
-
-  // Load assigned vehicle for drivers
+  // Load driver's assigned vehicle
   useEffect(() => {
     if (user?.role === "driver") {
       axios.get("/drivers/me/vehicle").then((res) => {
@@ -41,7 +38,7 @@ export default function ExpenseManagement() {
     }
   }, [user]);
 
-  // Auto-set if only 1 vehicle
+  // Auto-select vehicle if only one exists
   useEffect(() => {
     if (vehicles.length === 1) {
       setFormData((prev) => ({ ...prev, vehicle_id: vehicles[0].id }));
@@ -75,10 +72,11 @@ export default function ExpenseManagement() {
     }
   };
 
+  // Submit form
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-
     const fd = new FormData();
+
     fd.append("vehicleId", formData.vehicle_id);
     fd.append("type", formData.category);
     fd.append("amount", formData.amount);
@@ -94,6 +92,7 @@ export default function ExpenseManagement() {
     window.location.reload();
   };
 
+  // Expense Card
   const ExpenseCard = ({ expense }: { expense: Expense }) => {
     const vehicle = vehicles.find((v) => v.id === expense.vehicle_id);
 
@@ -103,19 +102,23 @@ export default function ExpenseManagement() {
           <div className="flex items-center space-x-3">
             <div
               className={`p-2 rounded-lg ${
-                getCategoryColor(expense.category).replace("text-", "bg-").replace("800", "100")
+                getCategoryColor(expense.category)
+                  .replace("text-", "bg-")
+                  .replace("800", "100")
               }`}
             >
               <DollarSign
                 className={`h-6 w-6 ${
-                  getCategoryColor(expense.category).replace("bg-", "text-").replace("100", "600")
+                  getCategoryColor(expense.category)
+                    .replace("bg-", "text-")
+                    .replace("100", "600")
                 }`}
               />
             </div>
 
             <div>
               <h3 className="font-semibold text-gray-900 text-lg">
-                {expense.description}
+                {expense.description || expense.category.toUpperCase()}
               </h3>
               <p className="text-gray-600">
                 {vehicle?.vehicle_number}
@@ -139,16 +142,16 @@ export default function ExpenseManagement() {
           </div>
         </div>
 
+        {/* FIXED RECEIPT IMAGE DISPLAY */}
         {expense.receipt_url && (
           <div className="mt-4 pt-4 border-t border-gray-100">
             <p className="text-sm text-gray-600 mb-2">Receipt:</p>
+
             <img
-              src={`${BACKEND}${expense.receipt_url}`}
+              src={expense.receipt_url} // FIXED: now uses direct URL
               alt="Receipt"
               className="max-w-xs rounded-lg border border-gray-200 cursor-pointer hover:opacity-90"
-              onClick={() =>
-                window.open(`${BACKEND}${expense.receipt_url}`, "_blank")
-              }
+              onClick={() => window.open(expense.receipt_url, "_blank")}
             />
           </div>
         )}
@@ -169,64 +172,62 @@ export default function ExpenseManagement() {
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-4 py-2 rounded-lg font-medium hover:from-purple-600 hover:to-pink-700 transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl"
+          className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 shadow-lg"
         >
           <Plus className="h-5 w-5" />
           <span>Add Expense</span>
         </button>
       </div>
 
-      {/* Stats */}
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <p className="text-gray-600 text-sm font-medium">Total Expenses</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
-            ₹{totalExpenses.toLocaleString()}
-          </p>
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <p className="text-gray-600">Total Expenses</p>
+          <p className="text-2xl font-bold">₹{totalExpenses.toLocaleString()}</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <p className="text-gray-600 text-sm font-medium">Fuel</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <p className="text-gray-600">Fuel</p>
+          <p className="text-2xl font-bold">
             ₹
             {filteredExpenses
               .filter((e) => e.category === "fuel")
-              .reduce((sum, e) => sum + e.amount, 0)
+              .reduce((s, e) => s + e.amount, 0)
               .toLocaleString()}
           </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <p className="text-gray-600 text-sm font-medium">Maintenance</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <p className="text-gray-600">Maintenance</p>
+          <p className="text-2xl font-bold">
             ₹
             {filteredExpenses
               .filter((e) => e.category === "maintenance")
-              .reduce((sum, e) => sum + e.amount, 0)
+              .reduce((s, e) => s + e.amount, 0)
               .toLocaleString()}
           </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <p className="text-gray-600 text-sm font-medium">Toll</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <p className="text-gray-600">Toll</p>
+          <p className="text-2xl font-bold">
             ₹
             {filteredExpenses
               .filter((e) => e.category === "toll")
-              .reduce((sum, e) => sum + e.amount, 0)
+              .reduce((s, e) => s + e.amount, 0)
               .toLocaleString()}
           </p>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      {/* Filter */}
+      <div className="bg-white rounded-xl shadow-sm border p-4">
         <div className="flex items-center space-x-4">
           <Filter className="h-5 w-5 text-gray-400" />
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="px-3 py-2 border rounded-lg"
           >
             <option value="all">All</option>
             <option value="fuel">Fuel</option>
@@ -237,13 +238,13 @@ export default function ExpenseManagement() {
             <option value="other">Other</option>
           </select>
 
-          <div className="text-sm text-gray-600">
+          <span className="text-gray-600 text-sm">
             Showing {filteredExpenses.length} expenses
-          </div>
+          </span>
         </div>
       </div>
 
-      {/* List */}
+      {/* Expense List */}
       <div className="space-y-4">
         {filteredExpenses.map((exp) => (
           <ExpenseCard key={exp.id} expense={exp} />
@@ -251,42 +252,37 @@ export default function ExpenseManagement() {
 
         {filteredExpenses.length === 0 && (
           <div className="text-center py-12">
-            <Receipt className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">No expenses found</p>
-            <p className="text-gray-400">Try selecting a different category</p>
+            <Receipt className="h-16 w-16 text-gray-300 mx-auto" />
+            <p className="text-gray-600 mt-4">No expenses found</p>
           </div>
         )}
       </div>
 
-      {/* Modal */}
+      {/* Add Expense Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Add New Expense
-              </h2>
+            <div className="p-6 border-b">
+              <h2 className="text-xl font-semibold">Add New Expense</h2>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {/* Vehicle */}
+              {/* Vehicle Select */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Vehicle
-                </label>
+                <label className="block text-sm font-medium mb-2">Vehicle</label>
                 <select
                   required
                   value={formData.vehicle_id}
+                  disabled={user?.role === "driver" && assignedVehicle}
                   onChange={(e) =>
                     setFormData({ ...formData, vehicle_id: e.target.value })
                   }
-                  disabled={user?.role === "driver" && assignedVehicle}
                   className="w-full px-3 py-2 border rounded-lg"
                 >
                   <option value="">Select vehicle</option>
                   {vehicles.map((v) => (
                     <option key={v.id} value={v.id}>
-                      {v.vehicle_number} - {v.make} {v.model}
+                      {v.vehicle_number} – {v.make} {v.model}
                     </option>
                   ))}
                 </select>
@@ -294,9 +290,7 @@ export default function ExpenseManagement() {
 
               {/* Category */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category
-                </label>
+                <label className="block text-sm font-medium mb-2">Category</label>
                 <select
                   value={formData.category}
                   onChange={(e) =>
@@ -315,9 +309,7 @@ export default function ExpenseManagement() {
 
               {/* Amount */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Amount (₹)
-                </label>
+                <label className="block text-sm font-medium mb-2">Amount (₹)</label>
                 <input
                   type="number"
                   required
@@ -332,7 +324,7 @@ export default function ExpenseManagement() {
 
               {/* Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium mb-2">
                   Expense Date
                 </label>
                 <input
@@ -348,7 +340,7 @@ export default function ExpenseManagement() {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium mb-2">
                   Description
                 </label>
                 <textarea
@@ -362,9 +354,9 @@ export default function ExpenseManagement() {
                 />
               </div>
 
-              {/* Receipt */}
+              {/* Receipt Upload */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium mb-2">
                   Bill Photo (Optional)
                 </label>
                 <input
@@ -390,7 +382,7 @@ export default function ExpenseManagement() {
                 </button>
                 <button
                   type="submit"
-                  className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-2 rounded-lg"
+                  className="px-6 py-2 rounded-lg bg-purple-600 text-white"
                 >
                   Add Expense
                 </button>

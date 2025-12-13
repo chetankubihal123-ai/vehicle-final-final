@@ -1,11 +1,11 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { addExpense, getExpenses } = require('../controllers/expenseController');
-const auth = require('../middleware/authMiddleware');
-const multer = require('multer');
-const path = require('path');
+const { addExpense, getExpenses } = require("../controllers/expenseController");
+const auth = require("../middleware/authMiddleware");
+const multer = require("multer");
+const path = require("path");
 
-// Store files inside backend/uploads
+// Define storage for uploaded images
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, path.join(__dirname, "..", "uploads"));
@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
   }
 });
 
-// Accept only images
+// Allow only images
 const fileFilter = (req, file, cb) => {
   const allowed = /png|jpg|jpeg|webp/;
   const extOK = allowed.test(path.extname(file.originalname).toLowerCase());
@@ -28,18 +28,18 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
-// POST /api/expenses
+// POST: Add new expense with optional receipt
 router.post(
-  '/',
-  auth(['fleet_owner', 'admin', 'driver']),
-  upload.single('receipt'),
+  "/",
+  auth(["fleet_owner", "admin", "driver"]),
+  upload.single("receipt"),
   addExpense
 );
 
-// GET /api/expenses
+// GET: Fetch expenses
 router.get(
-  '/',
-  auth(['fleet_owner', 'admin', 'driver']),
+  "/",
+  auth(["fleet_owner", "admin", "driver"]),
   getExpenses
 );
 
