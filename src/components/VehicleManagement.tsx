@@ -31,7 +31,6 @@ export default function VehicleManagement() {
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
 
-  // Update model list when make changes
   useEffect(() => {
     if (formData.make && vehicleModels[formData.make]) {
       setAvailableModels(vehicleModels[formData.make]);
@@ -42,35 +41,24 @@ export default function VehicleManagement() {
 
   const getVehicleIcon = (type: Vehicle["vehicle_type"]) => {
     switch (type.toLowerCase()) {
-      case "car":
-        return Car;
-      case "truck":
-        return Truck;
-      case "bus":
-        return Bus;
-      case "two_wheeler":
-        return Bike;
-      default:
-        return Car;
+      case "car": return Car;
+      case "truck": return Truck;
+      case "bus": return Bus;
+      case "two_wheeler": return Bike;
+      default: return Car;
     }
   };
 
   const getStatusColor = (status: Vehicle["status"]) => {
     switch (status) {
-      case "active":
-        return "text-green-500";
-      case "maintenance":
-        return "text-yellow-500";
-      case "inactive":
-        return "text-red-500";
-      default:
-        return "text-gray-500";
+      case "active": return "text-green-500";
+      case "maintenance": return "text-yellow-500";
+      case "inactive": return "text-red-500";
+      default: return "text-gray-500";
     }
   };
 
-  // -------------------------
   // ADD VEHICLE
-  // -------------------------
   const handleSubmitAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -87,9 +75,7 @@ export default function VehicleManagement() {
     setFormData(emptyForm);
   };
 
-  // -------------------------
   // OPEN EDIT MODAL
-  // -------------------------
   const openEditModal = (vehicle: Vehicle) => {
     setEditingVehicle(vehicle);
 
@@ -109,9 +95,7 @@ export default function VehicleManagement() {
     setShowEditModal(true);
   };
 
-  // -------------------------
   // SAVE EDIT
-  // -------------------------
   const handleSubmitEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingVehicle) return;
@@ -134,19 +118,14 @@ export default function VehicleManagement() {
     setEditingVehicle(null);
   };
 
-  // -------------------------
-  // DELETE VEHICLE
-  // -------------------------
+  // DELETE
   const handleDeleteVehicle = async (vehicleId: string) => {
     const ok = confirm("Delete this vehicle?");
     if (!ok) return;
-
     await deleteVehicle(vehicleId);
   };
 
-  // -------------------------
-  // CARD UI
-  // -------------------------
+  // VEHICLE CARD
   const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
     const Icon = getVehicleIcon(vehicle.vehicle_type);
 
@@ -195,17 +174,11 @@ export default function VehicleManagement() {
         </div>
 
         <div className="flex justify-end space-x-2 mt-4 pt-4 border-t">
-          <button
-            onClick={() => openEditModal(vehicle)}
-            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-          >
+          <button onClick={() => openEditModal(vehicle)} className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
             <Edit2 className="h-4 w-4" />
           </button>
 
-          <button
-            onClick={() => handleDeleteVehicle(vehicle.id)}
-            className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg"
-          >
+          <button onClick={() => handleDeleteVehicle(vehicle.id)} className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg">
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
@@ -254,7 +227,7 @@ export default function VehicleManagement() {
       {/* EDIT MODAL */}
       {showEditModal && (
         <Modal
-          key={editingVehicle?.id} // <<< IMPORTANT: Forces proper refresh
+          key={editingVehicle?.id}
           title="Edit Vehicle"
           onClose={() => setShowEditModal(false)}
           onSubmit={handleSubmitEdit}
@@ -268,15 +241,12 @@ export default function VehicleManagement() {
 }
 
 /* ---------------------------------------------
-   REUSABLE MODAL COMPONENT
+   MODAL COMPONENT
 --------------------------------------------- */
 function Modal({ title, onClose, onSubmit, formData, setFormData, availableModels }: any) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <form
-        onSubmit={onSubmit}
-        className="bg-white max-w-2xl w-full rounded-xl shadow-xl p-6 space-y-4"
-      >
+      <form onSubmit={onSubmit} className="bg-white max-w-2xl w-full rounded-xl shadow-xl p-6 space-y-4">
         <h2 className="text-xl font-semibold">{title}</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -288,11 +258,11 @@ function Modal({ title, onClose, onSubmit, formData, setFormData, availableModel
 
           <VehicleAutocomplete label="Model" value={formData.model} onChange={(v) => setFormData({ ...formData, model: v })} options={availableModels} />
 
-          <NumberInput label="Year" min={1990} max={new Date().getFullYear()} value={formData.year} onChange={(v) => setFormData({ ...formData, year: v })} />
+          <NumberInput label="Year" value={formData.year} min={1990} max={new Date().getFullYear()} onChange={(v) => setFormData({ ...formData, year: v })} />
 
           <Select label="Fuel Type" value={formData.fuel_type} onChange={(v) => setFormData({ ...formData, fuel_type: v })} options={["petrol", "diesel", "electric", "hybrid"]} />
 
-          <NumberInput label="Mileage" min={0} value={formData.current_mileage} onChange={(v) => setFormData({ ...formData, current_mileage: v })} />
+          <NumberInput label="Mileage" value={formData.current_mileage} min={0} onChange={(v) => setFormData({ ...formData, current_mileage: v })} />
 
           <Input label="Insurance Expiry" type="date" value={formData.insurance_expiry} onChange={(v) => setFormData({ ...formData, insurance_expiry: v })} />
 
@@ -331,16 +301,20 @@ function Input({ label, value, onChange, type = "text" }: any) {
   );
 }
 
+// FIXED NUMBER INPUT — NOW WORKING 100%
 function NumberInput({ label, value, onChange, min, max }: any) {
   return (
-    <Input
-      label={label}
-      type="number"
-      value={value}
-      onChange={(e) => onChange(Number(e.target.value))}
-      min={min}
-      max={max}
-    />
+    <div>
+      <label className="block text-sm mb-1">{label}</label>
+      <input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full px-3 py-2 border rounded"
+      />
+    </div>
   );
 }
 
