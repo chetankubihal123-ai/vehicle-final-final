@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Car, Truck, Bus, Bike, Circle } from 'lucide-react';
 import { useVehicles } from '../hooks/useVehicles';
 import { Vehicle } from '../types';
@@ -6,11 +6,11 @@ import { format, parseISO } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 import VehicleAutocomplete from './VehicleAutocomplete';
 import { vehicleTypes, vehicleMakes, vehicleModels } from '../data/vehicleData';
-import axios from 'axios';
 
 export default function VehicleManagement() {
   const { user } = useAuth();
-  const { vehicles, addVehicle } = useVehicles();
+  const { vehicles, addVehicle, deleteVehicle } = useVehicles();
+  
   const [showAddModal, setShowAddModal] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
 
@@ -27,8 +27,8 @@ export default function VehicleManagement() {
     permit_expiry: '',
   });
 
-  // Update models based on selected make
-  React.useEffect(() => {
+  // Update model list when make changes
+  useEffect(() => {
     if (formData.make && vehicleModels[formData.make]) {
       setAvailableModels(vehicleModels[formData.make]);
     } else {
@@ -36,6 +36,7 @@ export default function VehicleManagement() {
     }
   }, [formData.make]);
 
+  // Vehicle Type Icons
   const getVehicleIcon = (type: Vehicle['vehicle_type']) => {
     switch (type.toLowerCase()) {
       case 'car': return Car;
@@ -46,6 +47,7 @@ export default function VehicleManagement() {
     }
   };
 
+  // Status color mapping
   const getStatusColor = (status: Vehicle['status']) => {
     switch (status) {
       case 'active': return 'text-green-500';
@@ -55,6 +57,7 @@ export default function VehicleManagement() {
     }
   };
 
+  // Submit Add Vehicle
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -66,6 +69,8 @@ export default function VehicleManagement() {
     });
 
     setShowAddModal(false);
+
+    // Reset form
     setFormData({
       vehicle_number: '',
       vehicle_type: 'Car',
@@ -80,25 +85,19 @@ export default function VehicleManagement() {
     });
   };
 
-  // ============================================
-  // 🚀 DELETE VEHICLE FUNCTION (FIX)
-  // ============================================
+  // Handle Delete Vehicle (using hook)
   const handleDeleteVehicle = async (vehicleId: string) => {
     const ok = confirm("Are you sure you want to delete this vehicle?");
     if (!ok) return;
 
     try {
-      await axios.delete(`/vehicles/${vehicleId}`);
-      window.location.reload();
-    } catch (error) {
-      console.error("Failed to delete:", error);
-      alert("Error deleting vehicle.");
+      await deleteVehicle(vehicleId);
+    } catch {
+      alert("Failed to delete vehicle");
     }
   };
 
-  // ============================================
-  // VEHICLE CARD
-  // ============================================
+  // VEHICLE CARD COMPONENT
   const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
     const Icon = getVehicleIcon(vehicle.vehicle_type);
 
@@ -123,24 +122,22 @@ export default function VehicleManagement() {
           </div>
         </div>
 
+        {/* DETAILS GRID */}
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <p className="text-gray-500">Fuel Type</p>
             <p className="font-medium text-gray-900 capitalize">{vehicle.fuel_type}</p>
           </div>
-
           <div>
             <p className="text-gray-500">Current Mileage</p>
             <p className="font-medium text-gray-900">{vehicle.current_mileage.toLocaleString()} km</p>
           </div>
-
           <div>
             <p className="text-gray-500">Insurance Expiry</p>
             <p className="font-medium text-gray-900">
               {vehicle.insurance_expiry ? format(parseISO(vehicle.insurance_expiry), 'MMM dd, yyyy') : 'N/A'}
             </p>
           </div>
-
           <div>
             <p className="text-gray-500">Next Service</p>
             <p className="font-medium text-gray-900">
@@ -149,7 +146,7 @@ export default function VehicleManagement() {
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* ACTION BUTTONS */}
         <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-gray-100">
           <button className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
             <Edit2 className="h-4 w-4" />
@@ -166,12 +163,10 @@ export default function VehicleManagement() {
     );
   };
 
-  // ============================================
-  // MAIN COMPONENT RETURN
-  // ============================================
+  // MAIN RETURN
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
+      {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Vehicle Management</h1>
@@ -187,7 +182,7 @@ export default function VehicleManagement() {
         </button>
       </div>
 
-      {/* Vehicle Grid */}
+      {/* VEHICLE GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {vehicles.map((vehicle) => (
           <VehicleCard key={vehicle.id} vehicle={vehicle} />
@@ -202,10 +197,11 @@ export default function VehicleManagement() {
         )}
       </div>
 
-      {/* ADD VEHICLE MODAL (UNCHANGED) */}
+      {/* ADD VEHICLE MODAL */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-xl font-semibold text-gray-900">Add New Vehicle</h2>
             </div>
@@ -213,10 +209,7 @@ export default function VehicleManagement() {
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 
-                {/* FORM FIELDS SAME AS BEFORE */}
-                {/* Your original modal code stays unchanged */}
-                {/* Keeping everything intact to avoid UI conflicts */}
-
+                {/* VEHICLE NUMBER */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Vehicle Number
@@ -226,10 +219,12 @@ export default function VehicleManagement() {
                     required
                     value={formData.vehicle_number}
                     onChange={(e) => setFormData({ ...formData, vehicle_number: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="e.g., KA01AB1234"
                   />
                 </div>
 
+                {/* TYPE */}
                 <div>
                   <VehicleAutocomplete
                     label="Vehicle Type"
@@ -240,6 +235,7 @@ export default function VehicleManagement() {
                   />
                 </div>
 
+                {/* MAKE */}
                 <div>
                   <VehicleAutocomplete
                     label="Make"
@@ -250,6 +246,7 @@ export default function VehicleManagement() {
                   />
                 </div>
 
+                {/* MODEL */}
                 <div>
                   <VehicleAutocomplete
                     label="Model"
@@ -260,23 +257,25 @@ export default function VehicleManagement() {
                   />
                 </div>
 
+                {/* YEAR */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Year
+                  </label>
                   <input
                     type="number"
-                    required
                     min="1990"
                     max={new Date().getFullYear()}
+                    required
                     value={formData.year}
-                    onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, year: Number(e.target.value) })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   />
                 </div>
 
+                {/* FUEL */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Fuel Type
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Fuel Type</label>
                   <select
                     value={formData.fuel_type}
                     onChange={(e) => setFormData({ ...formData, fuel_type: e.target.value as Vehicle['fuel_type'] })}
@@ -289,20 +288,20 @@ export default function VehicleManagement() {
                   </select>
                 </div>
 
+                {/* CURRENT MILEAGE */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Current Mileage
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Current Mileage</label>
                   <input
                     type="number"
-                    required
                     min="0"
+                    required
                     value={formData.current_mileage}
-                    onChange={(e) => setFormData({ ...formData, current_mileage: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, current_mileage: Number(e.target.value) })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   />
                 </div>
 
+                {/* INSURANCE */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Insurance Expiry
@@ -316,6 +315,7 @@ export default function VehicleManagement() {
                   />
                 </div>
 
+                {/* SERVICE */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Service Due Date
@@ -329,6 +329,7 @@ export default function VehicleManagement() {
                   />
                 </div>
 
+                {/* PERMIT */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Permit Expiry (Optional)
@@ -340,13 +341,15 @@ export default function VehicleManagement() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   />
                 </div>
+
               </div>
 
+              {/* ACTION BUTTONS */}
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
                 >
                   Cancel
                 </button>
@@ -358,7 +361,9 @@ export default function VehicleManagement() {
                   Add Vehicle
                 </button>
               </div>
+
             </form>
+
           </div>
         </div>
       )}
