@@ -14,8 +14,6 @@ export default function VehicleManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
-
   const emptyForm = {
     vehicle_number: "",
     vehicle_type: "Car",
@@ -30,10 +28,10 @@ export default function VehicleManagement() {
   };
 
   const [formData, setFormData] = useState(emptyForm);
-
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
 
-  // Update models list when make changes
+  // Update model list when make changes
   useEffect(() => {
     if (formData.make && vehicleModels[formData.make]) {
       setAvailableModels(vehicleModels[formData.make]);
@@ -70,13 +68,17 @@ export default function VehicleManagement() {
     }
   };
 
+  // -------------------------
   // ADD VEHICLE
+  // -------------------------
   const handleSubmitAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
     await addVehicle({
       ...formData,
+      vehicle_type: formData.vehicle_type.toLowerCase(),
+      fuel_type: formData.fuel_type.toLowerCase(),
       owner_id: user.id,
       status: "active",
     });
@@ -85,7 +87,9 @@ export default function VehicleManagement() {
     setFormData(emptyForm);
   };
 
+  // -------------------------
   // OPEN EDIT MODAL
+  // -------------------------
   const openEditModal = (vehicle: Vehicle) => {
     setEditingVehicle(vehicle);
 
@@ -105,7 +109,9 @@ export default function VehicleManagement() {
     setShowEditModal(true);
   };
 
+  // -------------------------
   // SAVE EDIT
+  // -------------------------
   const handleSubmitEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingVehicle) return;
@@ -113,11 +119,11 @@ export default function VehicleManagement() {
     await editVehicle({
       ...editingVehicle,
       vehicle_number: formData.vehicle_number,
-      vehicle_type: formData.vehicle_type,
+      vehicle_type: formData.vehicle_type.toLowerCase(),
       make: formData.make,
       model: formData.model,
       year: formData.year,
-      fuel_type: formData.fuel_type,
+      fuel_type: formData.fuel_type.toLowerCase(),
       current_mileage: formData.current_mileage,
       insurance_expiry: formData.insurance_expiry,
       service_due_date: formData.service_due_date,
@@ -128,19 +134,24 @@ export default function VehicleManagement() {
     setEditingVehicle(null);
   };
 
+  // -------------------------
   // DELETE VEHICLE
+  // -------------------------
   const handleDeleteVehicle = async (vehicleId: string) => {
     const ok = confirm("Delete this vehicle?");
     if (!ok) return;
+
     await deleteVehicle(vehicleId);
   };
 
-  // VEHICLE CARD
+  // -------------------------
+  // CARD UI
+  // -------------------------
   const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
     const Icon = getVehicleIcon(vehicle.vehicle_type);
 
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition">
+      <div className="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -156,23 +167,21 @@ export default function VehicleManagement() {
 
           <div className="flex items-center space-x-1">
             <Circle className={`h-3 w-3 ${getStatusColor(vehicle.status)} fill-current`} />
-            <span className={`text-sm capitalize ${getStatusColor(vehicle.status)}`}>
-              {vehicle.status}
-            </span>
+            <span className={`text-sm capitalize ${getStatusColor(vehicle.status)}`}>{vehicle.status}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-gray-500">Fuel Type</p>
+            <p className="text-gray-500">Fuel</p>
             <p className="font-medium capitalize">{vehicle.fuel_type}</p>
           </div>
           <div>
-            <p className="text-gray-500">Current Mileage</p>
+            <p className="text-gray-500">Mileage</p>
             <p className="font-medium">{vehicle.current_mileage} km</p>
           </div>
           <div>
-            <p className="text-gray-500">Insurance Expiry</p>
+            <p className="text-gray-500">Insurance</p>
             <p className="font-medium">
               {vehicle.insurance_expiry ? format(parseISO(vehicle.insurance_expiry), "MMM dd, yyyy") : "N/A"}
             </p>
@@ -185,7 +194,7 @@ export default function VehicleManagement() {
           </div>
         </div>
 
-        <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-gray-100">
+        <div className="flex justify-end space-x-2 mt-4 pt-4 border-t">
           <button
             onClick={() => openEditModal(vehicle)}
             className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
@@ -204,7 +213,6 @@ export default function VehicleManagement() {
     );
   };
 
-  // MAIN UI
   return (
     <div className="p-6 space-y-6">
       {/* HEADER */}
@@ -230,26 +238,45 @@ export default function VehicleManagement() {
         ))}
       </div>
 
-      {/* ADD VEHICLE MODAL */}
+      {/* ADD MODAL */}
       {showAddModal && (
-        <Modal title="Add Vehicle" onClose={() => setShowAddModal(false)} onSubmit={handleSubmitAdd} formData={formData} setFormData={setFormData} availableModels={availableModels} />
+        <Modal
+          key="add"
+          title="Add Vehicle"
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleSubmitAdd}
+          formData={formData}
+          setFormData={setFormData}
+          availableModels={availableModels}
+        />
       )}
 
-      {/* EDIT VEHICLE MODAL */}
+      {/* EDIT MODAL */}
       {showEditModal && (
-        <Modal title="Edit Vehicle" onClose={() => setShowEditModal(false)} onSubmit={handleSubmitEdit} formData={formData} setFormData={setFormData} availableModels={availableModels} />
+        <Modal
+          key={editingVehicle?.id} // <<< IMPORTANT: Forces proper refresh
+          title="Edit Vehicle"
+          onClose={() => setShowEditModal(false)}
+          onSubmit={handleSubmitEdit}
+          formData={formData}
+          setFormData={setFormData}
+          availableModels={availableModels}
+        />
       )}
     </div>
   );
 }
 
-/* ------------------------------------------------------------------------
-   REUSABLE MODAL COMPONENT FOR BOTH ADD & EDIT
------------------------------------------------------------------------- */
+/* ---------------------------------------------
+   REUSABLE MODAL COMPONENT
+--------------------------------------------- */
 function Modal({ title, onClose, onSubmit, formData, setFormData, availableModels }: any) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <form onSubmit={onSubmit} className="bg-white max-w-2xl w-full rounded-xl shadow-xl p-6 space-y-4">
+      <form
+        onSubmit={onSubmit}
+        className="bg-white max-w-2xl w-full rounded-xl shadow-xl p-6 space-y-4"
+      >
         <h2 className="text-xl font-semibold">{title}</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -261,34 +288,35 @@ function Modal({ title, onClose, onSubmit, formData, setFormData, availableModel
 
           <VehicleAutocomplete label="Model" value={formData.model} onChange={(v) => setFormData({ ...formData, model: v })} options={availableModels} />
 
-          <NumberInput label="Year" value={formData.year} min={1990} max={new Date().getFullYear()} onChange={(v) => setFormData({ ...formData, year: v })} />
+          <NumberInput label="Year" min={1990} max={new Date().getFullYear()} value={formData.year} onChange={(v) => setFormData({ ...formData, year: v })} />
+
           <Select label="Fuel Type" value={formData.fuel_type} onChange={(v) => setFormData({ ...formData, fuel_type: v })} options={["petrol", "diesel", "electric", "hybrid"]} />
 
-          <NumberInput label="Current Mileage" value={formData.current_mileage} min={0} onChange={(v) => setFormData({ ...formData, current_mileage: v })} />
+          <NumberInput label="Mileage" min={0} value={formData.current_mileage} onChange={(v) => setFormData({ ...formData, current_mileage: v })} />
 
           <Input label="Insurance Expiry" type="date" value={formData.insurance_expiry} onChange={(v) => setFormData({ ...formData, insurance_expiry: v })} />
 
-          <Input label="Service Due Date" type="date" value={formData.service_due_date} onChange={(v) => setFormData({ ...formData, service_due_date: v })} />
+          <Input label="Service Due" type="date" value={formData.service_due_date} onChange={(v) => setFormData({ ...formData, service_due_date: v })} />
 
-          <Input label="Permit Expiry (Optional)" type="date" value={formData.permit_expiry} onChange={(v) => setFormData({ ...formData, permit_expiry: v })} />
+          <Input label="Permit Expiry" type="date" value={formData.permit_expiry} onChange={(v) => setFormData({ ...formData, permit_expiry: v })} />
         </div>
 
-        <div className="flex justify-end space-x-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
-          >
+        <div className="flex justify-end space-x-2 pt-4">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:text-gray-800">
             Cancel
           </button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg">Save</button>
+          <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            Save
+          </button>
         </div>
       </form>
     </div>
   );
 }
 
-/* ------------------------- Input Components ------------------------- */
+/* ---------------------------------------------
+   INPUT COMPONENTS
+--------------------------------------------- */
 function Input({ label, value, onChange, type = "text" }: any) {
   return (
     <div>
@@ -309,7 +337,7 @@ function NumberInput({ label, value, onChange, min, max }: any) {
       label={label}
       type="number"
       value={value}
-      onChange={(v: any) => onChange(Number(v))}
+      onChange={(e) => onChange(Number(e.target.value))}
       min={min}
       max={max}
     />
@@ -320,7 +348,11 @@ function Select({ label, value, onChange, options }: any) {
   return (
     <div>
       <label className="block text-sm mb-1">{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full px-3 py-2 border rounded">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 border rounded"
+      >
         {options.map((opt: string) => (
           <option key={opt} value={opt}>
             {opt.toUpperCase()}
