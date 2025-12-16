@@ -37,31 +37,31 @@ async function sendOTP(email, otp, name) {
   try {
     console.log(`📧 Attempting to send OTP to ${email}...`);
 
-    // 1. Try Resend first (Highest reliability)
-    if (resend) {
+    // 1. Try Gmail/Nodemailer FIRST (Allows sending to any email)
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       try {
-        const data = await resend.emails.send({
-          from: "VehicleTracker <onboarding@resend.dev>", // Default testing domain
+        await transporter.sendMail({
+          from: `"VehicleTracker" <${process.env.EMAIL_USER}>`,
           to: email,
           subject: "Your OTP Code",
           html: createOTPEmailHTML(otp, name),
         });
-        console.log("✅ Email sent via Resend:", data);
+        console.log("✅ Email sent via Gmail/Nodemailer");
         return true;
-      } catch (resendError) {
-        console.warn("⚠️ Resend failed, falling back to Nodemailer:", resendError.message);
+      } catch (gmailError) {
+        console.warn("⚠️ Gmail failed, falling back to Resend:", gmailError.message);
       }
     }
 
-    // 2. Fallback to Nodemailer (Gmail)
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      await transporter.sendMail({
-        from: `"VehicleTracker" <${process.env.EMAIL_USER}>`,
+    // 2. Try Resend as Fallback
+    if (resend) {
+      const data = await resend.emails.send({
+        from: "VehicleTracker <onboarding@resend.dev>",
         to: email,
         subject: "Your OTP Code",
         html: createOTPEmailHTML(otp, name),
       });
-      console.log("✅ Email sent via Gmail/Nodemailer");
+      console.log("✅ Email sent via Resend:", data);
       return true;
     }
 
