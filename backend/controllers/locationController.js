@@ -23,6 +23,7 @@ exports.updateLocation = async (req, res) => {
                 driverId,
                 lat,
                 lng,
+                speed: req.body.speed || 0,
                 timestamp
             },
             { upsert: true, new: true }
@@ -40,7 +41,7 @@ exports.updateLocation = async (req, res) => {
             {
                 $setOnInsert: { vehicleId, driverId },
                 $push: {
-                    locations: { lat, lng, timestamp }
+                    locations: { lat, lng, timestamp, speed: req.body.speed || 0 }
                 }
             },
             { upsert: true, new: true }

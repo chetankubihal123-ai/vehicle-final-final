@@ -54,7 +54,13 @@ export default function Layout({ children, activeTab, onTabChange }: LayoutProps
   const Sidebar = ({ className = '' }: { className?: string }) => (
     <div className={`bg-white shadow-lg h-full flex flex-col ${className}`}>
       <div className="p-6 border-b">
-        <div className="flex items-center space-x-2">
+        <div
+          className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => {
+            onTabChange('dashboard');
+            setSidebarOpen(false);
+          }}
+        >
           <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-lg">
             <Car className="h-6 w-6 text-white" />
           </div>
