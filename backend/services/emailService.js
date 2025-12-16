@@ -1,4 +1,4 @@
-// backend/services/emailService.js
+// backend/services/emailService.js - Updated for robust delivery
 const nodemailer = require("nodemailer");
 
 // Create a Gmail transporter using your .env credentials
