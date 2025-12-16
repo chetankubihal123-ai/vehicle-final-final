@@ -173,15 +173,17 @@ export default function VehicleManagement() {
           </div>
         </div>
 
-        <div className="flex justify-end space-x-2 mt-4 pt-4 border-t">
-          <button onClick={() => openEditModal(vehicle)} className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
-            <Edit2 className="h-4 w-4" />
-          </button>
+        {user?.role !== "driver" && (
+          <div className="flex justify-end space-x-2 mt-4 pt-4 border-t">
+            <button onClick={() => openEditModal(vehicle)} className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+              <Edit2 className="h-4 w-4" />
+            </button>
 
-          <button onClick={() => handleDeleteVehicle(vehicle.id)} className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg">
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
+            <button onClick={() => handleDeleteVehicle(vehicle.id)} className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
     );
   };
@@ -195,13 +197,15 @@ export default function VehicleManagement() {
           <p className="text-gray-600">Manage your fleet vehicles</p>
         </div>
 
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 shadow"
-        >
-          <Plus className="h-5 w-5" />
-          <span>Add Vehicle</span>
-        </button>
+        {user?.role !== "driver" && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 shadow"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Add Vehicle</span>
+          </button>
+        )}
       </div>
 
       {/* GRID */}
