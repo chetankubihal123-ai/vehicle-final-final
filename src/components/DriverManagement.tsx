@@ -83,10 +83,14 @@ export default function DriverManagement() {
         status: formData.status,
       };
 
+      if (formData.password) {
+        payload.password = formData.password;
+      }
+
       if (!editingDriver) {
         payload.name = formData.name;
         payload.email = formData.email;
-        payload.password = formData.password;
+        // payload.password is set above if provided (required by form for new users)
 
         await axios.post("/drivers", payload);
       } else {
@@ -273,16 +277,17 @@ export default function DriverManagement() {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
-                  <input
-                    type="password"
-                    required
-                    placeholder="Password"
-                    className="input"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  />
                 </>
               )}
+
+              <input
+                type="password"
+                required={!editingDriver}
+                placeholder={editingDriver ? "New Password (leave blank to keep)" : "Password"}
+                className="input"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              />
 
               <input
                 type="text"

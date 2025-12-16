@@ -139,6 +139,14 @@ exports.updateDriver = async (req, res) => {
     if (licenseNumber !== undefined) driver.licenseNumber = licenseNumber;
     if (status !== undefined) driver.status = status;
 
+    // Handle Password Update if provided
+    const { password } = req.body;
+    if (password && password.trim() !== "") {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await User.findByIdAndUpdate(driver.userId, { password: hashedPassword });
+      console.log("[UPDATE_DRIVER] Password updated for user:", driver.userId);
+    }
+
     await driver.save();
 
     console.log("[UPDATE_DRIVER] success:", driverId);
