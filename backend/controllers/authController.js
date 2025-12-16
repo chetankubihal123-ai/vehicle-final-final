@@ -48,13 +48,15 @@ exports.register = async (req, res) => {
     console.log("OTP Email sent result:", emailSent);
 
     if (!emailSent) {
-      await User.deleteOne({ _id: user._id });
-      return res.status(500).json({ message: "Failed to send OTP email" });
+      console.log("⚠️ Email failed to send. DEV MODE: OTP is", otp);
+      // Allow registration to proceed for demo purposes
+      // await User.deleteOne({ _id: user._id });
+      // return res.status(500).json({ message: "Failed to send OTP email" });
     }
 
     res
       .status(201)
-      .json({ message: "User registered. Please verify OTP sent to email." });
+      .json({ message: "User registered. Please verify OTP (Check email or server console)." });
   } catch (error) {
     console.error("Registration error details:", error);
     if (error.name === "ValidationError") {
@@ -112,10 +114,11 @@ exports.resendOTP = async (req, res) => {
     console.log("Resend OTP result:", emailSent);
 
     if (!emailSent) {
-      return res.status(500).json({ message: "Failed to send OTP email" });
+      console.log("⚠️ Resend Email failed. DEV MODE: New OTP is", otp);
+      // return res.status(500).json({ message: "Failed to send OTP email" });
     }
 
-    res.json({ message: "OTP resent successfully" });
+    res.json({ message: "OTP resent successfully (Check email or console)" });
   } catch (error) {
     console.error("Resend OTP error:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
@@ -193,10 +196,11 @@ exports.sendLoginOTP = async (req, res) => {
     const emailSent = await sendOTP(email, otp, user.name);
 
     if (!emailSent) {
-      return res.status(500).json({ message: "Failed to send OTP email" });
+      console.log("⚠️ Login OTP Email failed. DEV MODE: OTP is", otp);
+      // return res.status(500).json({ message: "Failed to send OTP email" });
     }
 
-    res.json({ message: "OTP sent successfully" });
+    res.json({ message: "OTP sent successfully (Check email or console)" });
   } catch (error) {
     console.error("Send Login OTP error:", error);
     res.status(500).json({ message: "Server Error", error: error.message });

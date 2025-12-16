@@ -1,7 +1,10 @@
 // src/config.ts
 
 // Your deployed backend URL on Render
-export const API_URL = "https://vehicle-final.onrender.com";
+// Automatically switch between localhost and Render based on environment
+export const API_URL = import.meta.env.DEV
+    ? "http://localhost:5000"
+    : "https://vehicle-final.onrender.com";
 
 // WebSocket URL (same as API_URL)
 export const WS_URL = API_URL;
