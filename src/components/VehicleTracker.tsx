@@ -128,7 +128,7 @@ export default function VehicleTracker({ vehicleId, vehicleName }: Props) {
 
       setCurrentLocation(loc);
       setLocationHistory((prev) =>
-        [...prev, [loc.lat, loc.lng] as [number, number]].slice(-300)
+        [...prev, [loc.lat, loc.lng] as [number, number]]
       );
 
       const diff = Date.now() - ts.getTime();
@@ -174,72 +174,57 @@ export default function VehicleTracker({ vehicleId, vehicleName }: Props) {
     const loadInitial = async () => {
       try {
         const token = localStorage.getItem("token");
-        if (!token) {
-          console.warn("[OWNER] No token; cannot load initial location");
-          return;
-        }
+        if (!token) return;
 
         const headers = { Authorization: `Bearer ${token}` };
 
-        // Last live location
+        // 1. Get Live Location
         try {
           const liveRes = await axios.get(
             `${API_URL}/api/location/live/${vehicleId}`,
             { headers }
           );
-          console.log("[OWNER] /live response:", liveRes.data);
-
           if (liveRes.data) {
             const { lat, lng, speed, timestamp } = liveRes.data;
-
-            if (
-              typeof lat === "number" &&
-              typeof lng === "number" &&
-              !Number.isNaN(lat) &&
-              !Number.isNaN(lng)
-            ) {
+            if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
               const ts = timestamp ? new Date(timestamp) : new Date();
-
               setCurrentLocation({
                 lat,
                 lng,
-                speed: typeof speed === "number" ? speed : 0,
+                speed: speed || 0,
                 timestamp: ts,
               });
-
-              const diff = Date.now() - ts.getTime();
-              setIsGPSStale(diff > STALE_MS);
+              setIsGPSStale(Date.now() - ts.getTime() > STALE_MS);
             }
           }
         } catch (e) {
-          console.warn("[OWNER] No live location yet", e);
+          // ignore 404
         }
 
-        // Today’s route history
+        // 2. Get History
         try {
           const historyRes = await axios.get(
             `${API_URL}/api/location/history/${vehicleId}`,
             { headers }
           );
-          console.log("[OWNER] /history response:", historyRes.data);
 
           if (historyRes.data?.locations?.length) {
-            const pts: [number, number][] = historyRes.data.locations
-              .filter(
-                (p: any) =>
-                  typeof p.lat === "number" &&
-                  typeof p.lng === "number" &&
-                  !Number.isNaN(p.lat) &&
-                  !Number.isNaN(p.lng)
-              )
-              .map((p: any) => [p.lat, p.lng] as [number, number]);
+            const serverPts = historyRes.data.locations
+              .filter((p: any) => !Number.isNaN(p.lat) && !Number.isNaN(p.lng))
+              .map((p: any) => ({
+                lat: p.lat,
+                lng: p.lng,
+                timestamp: new Date(p.timestamp).getTime()
+              }));
 
-            if (pts.length) {
-              setLocationHistory(pts);
-            }
+            // Merge with existing state carefully
+            setLocationHistory(prev => {
+              const formattedServerPts = serverPts.map((p: any) => [p.lat, p.lng] as [number, number]);
+              return formattedServerPts;
+            });
           }
         } catch (e) {
-          console.warn("[OWNER] No route history yet", e);
+          // ignore
         }
       } catch (err) {
         console.error("[OWNER] initial load error:", err);
