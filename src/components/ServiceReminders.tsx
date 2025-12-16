@@ -18,43 +18,59 @@ export default function ServiceReminders() {
 
     vehicles.forEach((vehicle) => {
       // Service reminders
-      const serviceDays = differenceInDays(parseISO(vehicle.service_due_date), new Date());
-      reminders.push({
-        id: `${vehicle.id}-service`,
-        vehicle,
-        type: 'service',
-        dueDate: vehicle.service_due_date,
-        daysUntilDue: serviceDays,
-        priority: serviceDays <= 7 ? 'high' : serviceDays <= 30 ? 'medium' : 'low',
-      });
+      if (vehicle.service_due_date) {
+        try {
+          const serviceDays = differenceInDays(parseISO(vehicle.service_due_date), new Date());
+          reminders.push({
+            id: `${vehicle.id}-service`,
+            vehicle,
+            type: 'service',
+            dueDate: vehicle.service_due_date,
+            daysUntilDue: serviceDays,
+            priority: serviceDays <= 7 ? 'high' : serviceDays <= 30 ? 'medium' : 'low',
+          });
+        } catch (e) {
+          console.error("Invalid service date:", vehicle.service_due_date);
+        }
+      }
 
       // Insurance reminders
-      const insuranceDays = differenceInDays(parseISO(vehicle.insurance_expiry), new Date());
-      reminders.push({
-        id: `${vehicle.id}-insurance`,
-        vehicle,
-        type: 'insurance',
-        dueDate: vehicle.insurance_expiry,
-        daysUntilDue: insuranceDays,
-        priority: insuranceDays <= 7 ? 'high' : insuranceDays <= 30 ? 'medium' : 'low',
-      });
+      if (vehicle.insurance_expiry) {
+        try {
+          const insuranceDays = differenceInDays(parseISO(vehicle.insurance_expiry), new Date());
+          reminders.push({
+            id: `${vehicle.id}-insurance`,
+            vehicle,
+            type: 'insurance',
+            dueDate: vehicle.insurance_expiry,
+            daysUntilDue: insuranceDays,
+            priority: insuranceDays <= 7 ? 'high' : insuranceDays <= 30 ? 'medium' : 'low',
+          });
+        } catch (e) {
+          console.error("Invalid insurance date:", vehicle.insurance_expiry);
+        }
+      }
 
       // Permit reminders (if applicable)
       if (vehicle.permit_expiry) {
-        const permitDays = differenceInDays(parseISO(vehicle.permit_expiry), new Date());
-        reminders.push({
-          id: `${vehicle.id}-permit`,
-          vehicle,
-          type: 'permit',
-          dueDate: vehicle.permit_expiry,
-          daysUntilDue: permitDays,
-          priority: permitDays <= 7 ? 'high' : permitDays <= 30 ? 'medium' : 'low',
-        });
+        try {
+          const permitDays = differenceInDays(parseISO(vehicle.permit_expiry), new Date());
+          reminders.push({
+            id: `${vehicle.id}-permit`,
+            vehicle,
+            type: 'permit',
+            dueDate: vehicle.permit_expiry,
+            daysUntilDue: permitDays,
+            priority: permitDays <= 7 ? 'high' : permitDays <= 30 ? 'medium' : 'low',
+          });
+        } catch (e) {
+          console.error("Invalid permit date:", vehicle.permit_expiry);
+        }
       }
     });
 
     return reminders
-      .filter(r => r.daysUntilDue <= 60) // Show reminders for next 60 days
+      .filter(r => r.daysUntilDue <= 60 && !Number.isNaN(r.daysUntilDue)) // Check for NaN
       .sort((a, b) => a.daysUntilDue - b.daysUntilDue);
   };
 
@@ -81,7 +97,7 @@ export default function ServiceReminders() {
   const ReminderCard = ({ reminder }: { reminder: any }) => {
     const Icon = getPriorityIcon(reminder.daysUntilDue);
     const isOverdue = reminder.daysUntilDue < 0;
-    
+
     return (
       <div className={`rounded-xl shadow-sm border-l-4 p-6 hover:shadow-md transition-shadow ${getPriorityColor(reminder.priority, reminder.daysUntilDue)}`}>
         <div className="flex items-start justify-between">
@@ -102,21 +118,20 @@ export default function ServiceReminders() {
             <p className="font-medium text-gray-900">
               {format(parseISO(reminder.dueDate), 'MMM dd, yyyy')}
             </p>
-            <p className={`text-sm font-medium ${
-              isOverdue ? 'text-red-600' : 
-              reminder.daysUntilDue <= 7 ? 'text-red-600' : 
-              reminder.daysUntilDue <= 30 ? 'text-yellow-600' : 'text-blue-600'
-            }`}>
-              {isOverdue 
+            <p className={`text-sm font-medium ${isOverdue ? 'text-red-600' :
+                reminder.daysUntilDue <= 7 ? 'text-red-600' :
+                  reminder.daysUntilDue <= 30 ? 'text-yellow-600' : 'text-blue-600'
+              }`}>
+              {isOverdue
                 ? `${Math.abs(reminder.daysUntilDue)} days overdue`
-                : reminder.daysUntilDue === 0 
+                : reminder.daysUntilDue === 0
                   ? 'Due today'
                   : `${reminder.daysUntilDue} days remaining`
               }
             </p>
           </div>
         </div>
-        
+
         {isOverdue && (
           <div className="mt-4 p-3 bg-red-100 rounded-lg">
             <p className="text-red-800 text-sm font-medium">
