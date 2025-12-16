@@ -106,7 +106,19 @@ export default function LoginPage() {
           setTimer(600);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err.message === "Please verify your email first") {
+        try {
+          // Auto-trigger OTP resend for stuck users
+          await resendOTP(formData.email);
+          setAwaitingRegistrationOtp(true);
+          setSuccess("Account exists but not verified. New OTP sent!");
+          setTimer(600);
+          return;
+        } catch (resendErr) {
+          setError("Account unverified and failed to resend OTP.");
+        }
+      }
       setError(err instanceof Error ? err.message : "Authentication failed");
     }
   };
@@ -163,11 +175,10 @@ export default function LoginPage() {
 
       {/* ANIMATED GRADIENT BACKGROUND */}
       <div
-        className={`absolute inset-0 animate-gradient-xy ${
-          darkMode
+        className={`absolute inset-0 animate-gradient-xy ${darkMode
             ? "bg-gradient-to-br from-slate-950 via-purple-950 to-black"
             : "bg-gradient-to-br from-[#2E026D] via-[#6A00F5] to-[#C100FF]"
-        }`}
+          }`}
       ></div>
 
       {/* SVG WAVES BEHIND EVERYTHING */}
@@ -424,49 +435,49 @@ export default function LoginPage() {
                   {/* OTP INPUT */}
                   {(awaitingRegistrationOtp ||
                     (isLogin && isOtpLogin && otpSent)) && (
-                    <div>
-                      <label className="block text-gray-700 mb-1">
-                        Enter OTP sent to email
-                      </label>
-                      <div className="space-y-3">
-                        <input
-                          type="text"
-                          maxLength={6}
-                          value={otp}
-                          onChange={(e) => setOtp(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl border text-center text-2xl tracking-widest"
-                          placeholder="000000"
-                          autoFocus
-                        />
+                      <div>
+                        <label className="block text-gray-700 mb-1">
+                          Enter OTP sent to email
+                        </label>
+                        <div className="space-y-3">
+                          <input
+                            type="text"
+                            maxLength={6}
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border text-center text-2xl tracking-widest"
+                            placeholder="000000"
+                            autoFocus
+                          />
 
-                        <div className="flex justify-between items-center text-sm">
-                          <p className="text-gray-500">
-                            OTP expires in {Math.floor(timer / 60)}:
-                            {(timer % 60).toString().padStart(2, "0")}
-                          </p>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              try {
-                                if (isLogin && isOtpLogin) {
-                                  await sendLoginOTP(formData.email);
-                                } else {
-                                  await resendOTP(formData.email);
+                          <div className="flex justify-between items-center text-sm">
+                            <p className="text-gray-500">
+                              OTP expires in {Math.floor(timer / 60)}:
+                              {(timer % 60).toString().padStart(2, "0")}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  if (isLogin && isOtpLogin) {
+                                    await sendLoginOTP(formData.email);
+                                  } else {
+                                    await resendOTP(formData.email);
+                                  }
+                                  setTimer(600);
+                                  setSuccess("OTP resent successfully!");
+                                } catch (err) {
+                                  setError("Failed to resend OTP");
                                 }
-                                setTimer(600);
-                                setSuccess("OTP resent successfully!");
-                              } catch (err) {
-                                setError("Failed to resend OTP");
-                              }
-                            }}
-                            className="text-purple-600 hover:text-purple-800 font-semibold hover:underline"
-                          >
-                            Resend OTP
-                          </button>
+                              }}
+                              className="text-purple-600 hover:text-purple-800 font-semibold hover:underline"
+                            >
+                              Resend OTP
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* PASSWORD */}
                   {!awaitingRegistrationOtp && !isOtpLogin && (
@@ -538,14 +549,14 @@ export default function LoginPage() {
                     {apiLoading
                       ? "Please wait..."
                       : awaitingRegistrationOtp
-                      ? "Verify OTP"
-                      : isLogin
-                      ? isOtpLogin
-                        ? otpSent
-                          ? "Verify OTP"
-                          : "Send OTP"
-                        : "Sign In"
-                      : "Create Account"}
+                        ? "Verify OTP"
+                        : isLogin
+                          ? isOtpLogin
+                            ? otpSent
+                              ? "Verify OTP"
+                              : "Send OTP"
+                            : "Sign In"
+                          : "Create Account"}
                   </button>
 
                   {/* OTP LOGIN TOGGLE */}
@@ -601,14 +612,14 @@ export default function LoginPage() {
             </div>
           </motion.div>
         </AnimatePresence>
-</div>
+      </div>
 
-{/* WATERMARK */}
-<div className="absolute bottom-6 w-full flex justify-center pointer-events-none z-20">
-  <p className="text-white/50 text-xs tracking-widest select-none">
-    MADE BY CARS
-  </p>
-</div>
+      {/* WATERMARK */}
+      <div className="absolute bottom-6 w-full flex justify-center pointer-events-none z-20">
+        <p className="text-white/50 text-xs tracking-widest select-none">
+          MADE BY CARS
+        </p>
+      </div>
 
       {/* EXTRA STYLES */}
       <style>{`
