@@ -6,6 +6,7 @@ import {
   Marker,
   Popup,
   Polyline,
+  Tooltip,
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
@@ -329,6 +330,15 @@ export default function VehicleTracker({ vehicleId, vehicleName }: Props) {
               position={[currentLocation.lat, currentLocation.lng]}
               icon={customIcon}
             >
+              <Tooltip
+                permanent
+                direction="top"
+                offset={[0, -36]}
+                opacity={1}
+                className="bg-white px-2 py-1 rounded shadow text-sm font-bold border border-gray-200 text-gray-800"
+              >
+                {vehicleName || "Vehicle"}
+              </Tooltip>
               <Popup>
                 <b>{vehicleName}</b>
                 <br />
@@ -342,8 +352,12 @@ export default function VehicleTracker({ vehicleId, vehicleName }: Props) {
               <Polyline
                 positions={locationHistory}
                 color="#7c3aed"
-                weight={4}
+                weight={5}
                 opacity={0.8}
+                smoothFactor={1}
+                lineCap="round"
+                lineJoin="round"
+                dashArray={isGPSStale ? "10, 10" : undefined}
               />
             )}
           </MapContainer>
