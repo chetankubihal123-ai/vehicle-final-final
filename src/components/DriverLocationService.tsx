@@ -158,54 +158,54 @@ export default function DriverLocationService() {
     setError("");
     await requestWakeLock();
 
-    // Interval every 2 seconds
-    gpsTimerRef.current = window.setInterval(() => {
-      // Check if socket is connected before sending
-      if (!socket.connected) {
-        console.warn("[DRIVER] Socket not connected, skipping location update");
-        setError("Socket disconnected. Reconnecting...");
-        socket.connect();
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude, speed, accuracy } = pos.coords;
-
-          // Build full payload
-          const location = {
-            lat: latitude,
-            lng: longitude,
-            speed: speed ?? 0,
-            accuracy: accuracy ?? null,
-            timestamp: new Date().toISOString(),
-          };
-
-          const payload = {
-            vehicleId,
-            location,
-          };
-
-          console.log("[DRIVER] send_location =>", payload);
-          socket.emit("send_location", payload);
-
-          // Update state for UI display
-          setCurrentLocation({ lat: latitude, lng: longitude });
-          setLastUpdate(new Date());
-          setUpdateCount((prev) => prev + 1);
-          setError(""); // Clear any previous errors
-        },
-        (err) => {
-          console.error("[DRIVER] GPS error:", err);
-          setError(`GPS Error: ${err.message}`);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 1000,
+    // Use watchPosition for real-time updates
+    const id = navigator.geolocation.watchPosition(
+      (pos) => {
+        // Check if socket is connected before sending
+        if (!socket.connected) {
+          console.warn("[DRIVER] Socket not connected, skipping location update");
+          setError("Socket disconnected. Reconnecting...");
+          socket.connect();
+          return;
         }
-      );
-    }, 2000);
+
+        const { latitude, longitude, speed, accuracy } = pos.coords;
+
+        // Build full payload
+        const location = {
+          lat: latitude,
+          lng: longitude,
+          speed: speed ?? 0,
+          accuracy: accuracy ?? null,
+          timestamp: new Date().toISOString(),
+        };
+
+        const payload = {
+          vehicleId,
+          location,
+        };
+
+        console.log("[DRIVER] send_location =>", payload);
+        socket.emit("send_location", payload);
+
+        // Update state for UI display
+        setCurrentLocation({ lat: latitude, lng: longitude });
+        setLastUpdate(new Date());
+        setUpdateCount((prev) => prev + 1);
+        setError(""); // Clear any previous errors
+      },
+      (err) => {
+        console.error("[DRIVER] GPS error:", err);
+        setError(`GPS Error: ${err.message}`);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0, // Force fresh GPS data
+      }
+    );
+
+    gpsTimerRef.current = id;
   };
 
   // -------------------------------
@@ -216,7 +216,7 @@ export default function DriverLocationService() {
     setIsTracking(false);
 
     if (gpsTimerRef.current !== null) {
-      window.clearInterval(gpsTimerRef.current);
+      navigator.geolocation.clearWatch(gpsTimerRef.current);
       gpsTimerRef.current = null;
     }
 
