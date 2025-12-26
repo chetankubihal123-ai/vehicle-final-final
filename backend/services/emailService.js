@@ -63,16 +63,22 @@ async function sendOTP(email, otp, name) {
     // 1. Try Brevo FIRST (Most Reliable)
     if (process.env.BREVO_USER && process.env.BREVO_PASS) {
       try {
-        await brevoTransporter.sendMail({
+        console.log(`🚀 Sending via Brevo to ${email}...`);
+        const info = await brevoTransporter.sendMail({
           from: `"VehicleTracker" <${process.env.BREVO_USER}>`,
           to: email,
           subject: "Your OTP Code",
           html: createOTPEmailHTML(otp, name),
         });
-        console.log("✅ Email sent via Brevo");
+        console.log("✅ Email sent via Brevo:", info.messageId);
         return true;
       } catch (brevoError) {
-        console.warn(`⚠️ Brevo failed: ${brevoError.message}`);
+        console.error("❌ BREVO ERROR DETAIL:", {
+          message: brevoError.message,
+          code: brevoError.code,
+          command: brevoError.command,
+          response: brevoError.response
+        });
       }
     }
 
@@ -92,7 +98,7 @@ async function sendOTP(email, otp, name) {
       }
     }
 
-    // 2. Try Resend as Fallback
+    // 3. Try Resend as Fallback
     if (resend) {
       try {
         console.log("🔄 Falling back to Resend API...");
@@ -105,9 +111,6 @@ async function sendOTP(email, otp, name) {
 
         if (response.error) {
           console.error("❌ Resend API Error:", response.error.message);
-          if (response.error.message.includes("testing emails to your own email address")) {
-            console.error("⚠️ RESEND RESTRICTION: You can only test with your own email (chetankubihal123@gmail.com) until you verify a domain or add authorized recipients.");
-          }
           return false;
         }
 
@@ -119,11 +122,11 @@ async function sendOTP(email, otp, name) {
       }
     }
 
-    console.error("❌ No email service configured (Resend or Gmail).");
+    console.error("❌ No email service configured (Brevo, Gmail, or Resend).");
     return false;
 
   } catch (error) {
-    console.error("❌ Email send fatal error:", error);
+    console.error("❌ SendOTP fatal error:", error.message);
     return false;
   }
 }
