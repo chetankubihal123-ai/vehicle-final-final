@@ -110,10 +110,11 @@ exports.resendOTP = async (req, res) => {
     await user.save();
 
     console.log("Resending OTP to:", email);
-    // Fire and Forget Email
-    sendOTP(email, otp, user.name).then(sent => {
-      if (!sent) console.log("⚠️ (Background) Resend Email failed. OTP:", otp);
-    });
+    const sent = await sendOTP(email, otp, user.name);
+    if (!sent) {
+      console.log("⚠️ Resend Email failed. OTP:", otp);
+      return res.status(500).json({ message: "Failed to send OTP email. Please try again later." });
+    }
 
     console.log("Resend OTP sending in background...");
 
@@ -192,15 +193,13 @@ exports.sendLoginOTP = async (req, res) => {
     await user.save();
 
     console.log("Sending Login OTP to:", email);
-    // Fire and Forget Email
-    sendOTP(email, otp, user.name).then(sent => {
-      if (!sent) console.log("⚠️ (Background) Login OTP Email failed. OTP:", otp);
-    });
+    const sent = await sendOTP(email, otp, user.name);
+    if (!sent) {
+      console.log("⚠️ Login OTP Email failed. OTP:", otp);
+      return res.status(500).json({ message: "Failed to send OTP email. Please try again later." });
+    }
 
-    // Assume success for UI speed
-    console.log("OTP sending in background...");
-
-    res.json({ message: "OTP sent successfully (Check email or console)" });
+    res.json({ message: "OTP sent successfully. Please check your email." });
   } catch (error) {
     console.error("Send Login OTP error:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
