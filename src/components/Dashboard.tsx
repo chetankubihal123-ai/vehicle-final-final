@@ -303,16 +303,7 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
-            <Filter className="h-4 w-4" />
-            Quick Filters
-          </button>
-          {!isDriver && (
-            <button className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-lg hover:opacity-90">
-              <TrendingUp className="h-4 w-4" />
-              Fleet Insights
-            </button>
-          )}
+          {/* Action buttons removed as they were placeholders */}
         </div>
       </div>
 
