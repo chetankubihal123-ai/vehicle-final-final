@@ -412,9 +412,9 @@ export default function FleetManagement() {
                                     <TruckIcon className="h-3 w-3 mr-1" />
                                     {driver.assigned_vehicle ? (
                                         <span className="font-semibold text-slate-700">
+                                            {driver.assigned_vehicle.make} {driver.assigned_vehicle.model}
+                                            <span className="mx-1.5 opacity-30">|</span>
                                             {driver.assigned_vehicle.vehicle_number}
-                                            <span className="mx-1 opacity-50">•</span>
-                                            {driver.assigned_vehicle.make}
                                         </span>
                                     ) : (
                                         <span className="italic">Unassigned</span>
