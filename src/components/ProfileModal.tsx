@@ -7,7 +7,6 @@ import {
     Calendar,
     MapPin,
     Camera,
-    Users,
     Loader2,
     Check
 } from "lucide-react";
