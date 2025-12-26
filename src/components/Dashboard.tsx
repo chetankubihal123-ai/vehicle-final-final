@@ -36,14 +36,12 @@ type AnyTrip = any;
 type AnyExpense = any;
 
 const VEHICLE_IMAGES = {
-  bike:
-    "https://images.unsplash.com/photo-1502877338535-766e1452684a?q=80&w=1200&auto=format&fit=crop",
-  car:
-    "https://images.unsplash.com/photo-1542362567-b07e54358753?q=80&w=1200&auto=format&fit=crop",
-  truck:
-    "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1200&auto=format&fit=crop",
-  bus:
-    "https://images.unsplash.com/photo-1542831371-d531d36971e6?q=80&w=1200&auto=format&fit=crop",
+  bike: "https://img.icons8.com/fluency/240/motorcycle.png",
+  scooter: "https://img.icons8.com/fluency/240/scooter.png",
+  car: "https://img.icons8.com/fluency/240/car.png",
+  truck: "https://img.icons8.com/fluency/240/truck.png",
+  bus: "https://img.icons8.com/fluency/240/bus.png",
+  van: "https://img.icons8.com/fluency/240/shuttle-bus.png",
 };
 
 // Resolve correct image based on vehicle type
@@ -418,11 +416,13 @@ export default function Dashboard() {
                   whileHover={{ scale: 1.01 }}
                   className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 hover:bg-slate-50"
                 >
-                  <img
-                    src={vehicleImageFor(v)}
-                    alt={v.vehicle_number}
-                    className="h-14 w-20 flex-shrink-0 rounded-lg object-cover"
-                  />
+                  <div className="h-14 w-14 flex-shrink-0 flex items-center justify-center bg-slate-100 rounded-xl group-hover:bg-indigo-50 transition-colors">
+                    <img
+                      src={vehicleImageFor(v)}
+                      alt={v.vehicle_number}
+                      className="h-10 w-10 object-contain p-1"
+                    />
+                  </div>
                   <div className="flex-1">
                     <p className="text-sm font-bold text-slate-900">
                       {v.make} {v.model}
@@ -437,10 +437,10 @@ export default function Dashboard() {
                   <div className="flex flex-col items-end gap-1">
                     <span
                       className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${v.status === "active"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : v.status === "maintenance"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-slate-100 text-slate-600"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : v.status === "maintenance"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-slate-100 text-slate-600"
                         }`}
                     >
                       {v.status || "Unknown"}
