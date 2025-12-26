@@ -13,7 +13,10 @@ interface Vehicle {
   type: string;
   currentDriver?: {
     _id: string;
-    name: string;
+    userId: {
+      _id: string;
+      name: string;
+    };
   };
   currentLocation?: {
     lat: number;
@@ -119,9 +122,8 @@ export default function LiveTracking() {
         </button>
         <VehicleTracker
           vehicleId={selectedVehicle._id}
-          vehicleName={`${selectedVehicle.registrationNumber} - ${
-            selectedVehicle.make || ""
-          } ${selectedVehicle.model || ""}`}
+          vehicleName={`${selectedVehicle.registrationNumber} - ${selectedVehicle.make || ""
+            } ${selectedVehicle.model || ""}`}
         />
       </div>
     );
@@ -209,18 +211,16 @@ function VehicleSection({
           <button
             key={vehicle._id}
             onClick={() => onSelect(vehicle)}
-            className={`text-left p-4 rounded-lg border-2 transition-all hover:shadow-md ${
-              active
-                ? "border-green-200 bg-green-50 hover:bg-green-100"
-                : "border-gray-200 bg-gray-50 hover:bg-gray-100"
-            }`}
+            className={`text-left p-4 rounded-lg border-2 transition-all hover:shadow-md ${active
+              ? "border-green-200 bg-green-50 hover:bg-green-100"
+              : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+              }`}
           >
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div
-                  className={`p-2 rounded-lg ${
-                    active ? "bg-green-500" : "bg-gray-400"
-                  }`}
+                  className={`p-2 rounded-lg ${active ? "bg-green-500" : "bg-gray-400"
+                    }`}
                 >
                   <Car className="h-5 w-5 text-white" />
                 </div>
@@ -234,16 +234,14 @@ function VehicleSection({
                 </div>
               </div>
               <span
-                className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
-                  active
-                    ? "text-green-700 bg-green-100"
-                    : "text-red-700 bg-red-100"
-                }`}
+                className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${active
+                  ? "text-green-700 bg-green-100"
+                  : "text-red-700 bg-red-100"
+                  }`}
               >
                 <div
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    active ? "bg-green-500" : "bg-red-500"
-                  }`}
+                  className={`h-1.5 w-1.5 rounded-full ${active ? "bg-green-500" : "bg-red-500"
+                    }`}
                 ></div>
                 {active ? "ONLINE" : "OFFLINE"}
               </span>
@@ -253,7 +251,7 @@ function VehicleSection({
               <div className="flex items-center gap-2 text-sm text-gray-700">
                 <MapPin className="h-4 w-4" />
                 <span className="font-medium">Driver:</span>
-                <span>{vehicle.currentDriver?.name || "Unassigned"}</span>
+                <span>{vehicle.currentDriver?.userId?.name || "Unassigned"}</span>
               </div>
 
               {vehicle.currentLocation && (

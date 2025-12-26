@@ -49,7 +49,13 @@ exports.getVehicles = async (req, res) => {
             query.ownerId = req.user.id;
         }
 
-        const vehicles = await Vehicle.find(query).populate('currentDriver', 'name licenseNumber');
+        const vehicles = await Vehicle.find(query).populate({
+            path: 'currentDriver',
+            populate: {
+                path: 'userId',
+                select: 'name email'
+            }
+        });
         res.json(vehicles);
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -59,7 +65,13 @@ exports.getVehicles = async (req, res) => {
 // Get single vehicle
 exports.getVehicleById = async (req, res) => {
     try {
-        const vehicle = await Vehicle.findById(req.params.id).populate('currentDriver');
+        const vehicle = await Vehicle.findById(req.params.id).populate({
+            path: 'currentDriver',
+            populate: {
+                path: 'userId',
+                select: 'name email'
+            }
+        });
         if (!vehicle) return res.status(404).json({ message: 'Vehicle not found' });
 
         // Access control
