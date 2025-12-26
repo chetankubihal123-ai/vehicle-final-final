@@ -9,30 +9,18 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-// Initialize Nodemailer with more explicit settings for Gmail
+// Initialize Nodemailer with alternative host and pooled connection
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // use STARTTLS
+  host: "smtp.googlemail.com",
+  port: 465,
+  secure: true,
+  pool: true, // Use a pool for multiple sends
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
   tls: {
-    // This often helps in cloud environments
     rejectUnauthorized: false
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
-});
-
-// Verify connection configuration on startup
-transporter.verify(function (error, success) {
-  if (error) {
-    console.error("❌ Email (Nodemailer) config error:", error.message);
-  } else {
-    console.log("✅ Email (Nodemailer) is ready to send");
   }
 });
 
