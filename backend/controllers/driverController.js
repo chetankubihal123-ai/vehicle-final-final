@@ -35,7 +35,7 @@ const normalizeVehicle = (value) => {
 // ---------------------- ADD DRIVER ----------------------
 exports.addDriver = async (req, res) => {
   try {
-    const { name, email, password, licenseNumber, assignedVehicle } = req.body;
+    const { name, email, password, licenseNumber, assignedVehicle, profilePic } = req.body;
 
     console.log("[ADD_DRIVER] payload:", {
       name,
@@ -62,6 +62,7 @@ exports.addDriver = async (req, res) => {
       password: hashedPassword,
       role: "driver",
       isVerified: true, // drivers added by owner/admin are auto-verified
+      profilePic: profilePic || "",
     });
     await user.save();
 
@@ -139,12 +140,18 @@ exports.updateDriver = async (req, res) => {
     if (licenseNumber !== undefined) driver.licenseNumber = licenseNumber;
     if (status !== undefined) driver.status = status;
 
-    // Handle Password Update if provided
-    const { password } = req.body;
+    // Handle User Updates
+    const { password, name, profilePic } = req.body;
+    const userUpdate = {};
+    if (name) userUpdate.name = name;
+    if (profilePic !== undefined) userUpdate.profilePic = profilePic;
     if (password && password.trim() !== "") {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      await User.findByIdAndUpdate(driver.userId, { password: hashedPassword });
-      console.log("[UPDATE_DRIVER] Password updated for user:", driver.userId);
+      userUpdate.password = await bcrypt.hash(password, 10);
+    }
+
+    if (Object.keys(userUpdate).length > 0) {
+      await User.findByIdAndUpdate(driver.userId, userUpdate);
+      console.log("[UPDATE_DRIVER] User details updated:", driver.userId);
     }
 
     await driver.save();
@@ -165,8 +172,8 @@ exports.getDrivers = async (req, res) => {
       req.user.role === "admin" ? {} : { ownerId: req.user.id };
 
     const drivers = await Driver.find(filter)
-      .populate("userId", "name email")
-      .populate("assignedVehicle", "registrationNumber");
+      .populate("userId", "name email profilePic")
+      .populate("assignedVehicle", "registrationNumber make model");
 
     res.json(drivers);
   } catch (error) {

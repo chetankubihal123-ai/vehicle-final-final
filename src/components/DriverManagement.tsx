@@ -13,6 +13,7 @@ interface Driver {
     _id: string;
     name: string;
     email: string;
+    profilePic?: string;
   };
   licenseNumber: string;
   assignedVehicle?: {
@@ -46,6 +47,7 @@ export default function DriverManagement() {
     licenseNumber: "",
     assignedVehicle: "",
     status: "Available" as "Available" | "On Trip" | "Inactive",
+    profilePic: "",
   });
 
   useEffect(() => {
@@ -81,6 +83,8 @@ export default function DriverManagement() {
         licenseNumber: formData.licenseNumber,
         assignedVehicle: formData.assignedVehicle || null,
         status: formData.status,
+        profilePic: formData.profilePic,
+        name: formData.name, // Allow updating name
       };
 
       if (formData.password) {
@@ -126,6 +130,7 @@ export default function DriverManagement() {
       licenseNumber: "",
       assignedVehicle: "",
       status: "Available",
+      profilePic: "",
     });
     setEditingDriver(null);
   };
@@ -139,6 +144,7 @@ export default function DriverManagement() {
       licenseNumber: driver.licenseNumber,
       assignedVehicle: driver.assignedVehicle?._id || "",
       status: driver.status,
+      profilePic: driver.userId.profilePic || "",
     });
     setShowModal(true);
   };
@@ -201,12 +207,21 @@ export default function DriverManagement() {
             whileHover={{ scale: 1.02 }}
             className="bg-white rounded-xl shadow-md p-6 border"
           >
-            <div className="flex justify-between">
-              <div>
-                <h3 className="font-bold text-lg">{driver.userId.name}</h3>
-                <p className="text-sm text-gray-600">{driver.userId.email}</p>
+            <div className="flex items-center gap-4">
+              <img
+                src={driver.userId.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.userId.name}`}
+                alt={driver.userId.name}
+                className="w-12 h-12 rounded-full border shadow-sm object-cover"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-lg truncate">{driver.userId.name}</h3>
+                    <p className="text-sm text-gray-600 truncate">{driver.userId.email}</p>
+                  </div>
+                  {getStatusIcon(driver.status)}
+                </div>
               </div>
-              {getStatusIcon(driver.status)}
             </div>
 
             <div className="mt-3">
@@ -277,16 +292,43 @@ export default function DriverManagement() {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
+                  <input
+                    type="password"
+                    required
+                    placeholder="Password"
+                    className="input"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  />
+                </>
+              )}
+
+              {editingDriver && (
+                <>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Driver Name"
+                    className="input"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                  <input
+                    type="password"
+                    placeholder="New Password (leave blank to keep)"
+                    className="input"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  />
                 </>
               )}
 
               <input
-                type="password"
-                required={!editingDriver}
-                placeholder={editingDriver ? "New Password (leave blank to keep)" : "Password"}
+                type="text"
+                placeholder="Profile Picture URL (Optional)"
                 className="input"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                value={formData.profilePic}
+                onChange={(e) => setFormData({ ...formData, profilePic: e.target.value })}
               />
 
               <input

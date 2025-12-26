@@ -28,7 +28,7 @@ import {
 } from 'recharts';
 
 export default function FleetManagement() {
-    const { vehicles, trips, expenses } = useVehicles();
+    const { vehicles, trips, expenses, drivers } = useVehicles();
     const [selectedTimeRange, setSelectedTimeRange] = useState<'week' | 'month' | 'year'>('month');
 
     // Fleet Statistics
@@ -373,6 +373,66 @@ export default function FleetManagement() {
                         <p>No fuel efficiency data available</p>
                     </div>
                 )}
+            </div>
+
+            {/* Active Fleet Assignments */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Activity className="h-5 w-5 text-indigo-600" />
+                        Active Fleet Assignments
+                    </h3>
+                    <span className="text-xs font-medium px-2 py-1 bg-indigo-50 text-indigo-700 rounded-full">
+                        {drivers.filter(d => d.assigned_vehicle).length} Drivers Assigned
+                    </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {drivers.map((driver) => (
+                        <motion.div
+                            key={driver.id}
+                            whileHover={{ scale: 1.02 }}
+                            className="flex items-center p-4 bg-slate-50 rounded-xl border border-slate-100 group"
+                        >
+                            <div className="relative">
+                                <img
+                                    src={driver.userId.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.userId.name}`}
+                                    alt={driver.userId.name}
+                                    className="w-16 h-16 rounded-full border-2 border-white shadow-sm object-cover"
+                                />
+                                <div className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white ${driver.status === 'Available' ? 'bg-green-500' :
+                                    driver.status === 'On Trip' ? 'bg-blue-500' : 'bg-gray-400'
+                                    }`} />
+                            </div>
+                            <div className="ml-4 flex-1">
+                                <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition">
+                                    {driver.userId.name}
+                                </h4>
+                                <div className="flex items-center text-xs text-slate-500 mt-1">
+                                    <TruckIcon className="h-3 w-3 mr-1" />
+                                    {driver.assigned_vehicle ? (
+                                        <span className="font-semibold text-slate-700">
+                                            {driver.assigned_vehicle.vehicle_number}
+                                            <span className="mx-1 opacity-50">•</span>
+                                            {driver.assigned_vehicle.make}
+                                        </span>
+                                    ) : (
+                                        <span className="italic">Unassigned</span>
+                                    )}
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-1">
+                                    ID: {driver.id.slice(-6).toUpperCase()}
+                                </p>
+                            </div>
+                        </motion.div>
+                    ))}
+                    {drivers.length === 0 && (
+                        <div className="col-span-full py-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                            <TruckIcon className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                            <p className="text-slate-500 font-medium">No drivers registered in your fleet yet.</p>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

@@ -8,7 +8,27 @@ export function useVehicles() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const mapDriver = (item: any): any => ({
+    id: item._id || item.id,
+    userId: {
+      id: item.userId?._id || item.userId,
+      name: item.userId?.name || "Unknown",
+      email: item.userId?.email || "",
+      profilePic: item.userId?.profilePic || ""
+    },
+    assigned_vehicle: item.assignedVehicle ? {
+      id: item.assignedVehicle._id || item.assignedVehicle,
+      vehicle_number: item.assignedVehicle.registrationNumber || "Unknown",
+      make: item.assignedVehicle.make || "",
+      model: item.assignedVehicle.model || ""
+    } : null,
+    status: item.status,
+    license_number: item.licenseNumber,
+    created_at: item.createdAt
+  });
 
   // -----------------------------
   // Mapping functions
@@ -43,16 +63,16 @@ export function useVehicles() {
       typeof item.startLocation === "string"
         ? item.startLocation
         : item.startLocation
-        ? `${item.startLocation.lat}, ${item.startLocation.lng}`
-        : "",
+          ? `${item.startLocation.lat}, ${item.startLocation.lng}`
+          : "",
     start_location_lat: item.startLocationLat || "",
     start_location_lon: item.startLocationLon || "",
     end_location:
       typeof item.endLocation === "string"
         ? item.endLocation
         : item.endLocation
-        ? `${item.endLocation.lat}, ${item.endLocation.lng}`
-        : "",
+          ? `${item.endLocation.lat}, ${item.endLocation.lng}`
+          : "",
     end_location_lat: item.endLocationLat || "",
     end_location_lon: item.endLocationLon || "",
     trip_date: item.startTime,
@@ -82,10 +102,11 @@ export function useVehicles() {
     if (!user) return;
     setLoading(true);
     try {
-      const [vehiclesRes, tripsRes, expensesRes] = await Promise.all([
+      const [vehiclesRes, tripsRes, expensesRes, driversRes] = await Promise.all([
         axios.get("/vehicles"),
         axios.get("/trips"),
         axios.get("/expenses"),
+        axios.get("/drivers")
       ]);
 
       setVehicles(
@@ -99,6 +120,11 @@ export function useVehicles() {
       setExpenses(
         Array.isArray(expensesRes.data)
           ? expensesRes.data.map(mapExpense)
+          : []
+      );
+      setDrivers(
+        Array.isArray(driversRes.data)
+          ? driversRes.data.map(mapDriver)
           : []
       );
     } catch (error) {
@@ -221,6 +247,7 @@ export function useVehicles() {
     vehicles,
     trips,
     expenses,
+    drivers,
     loading,
     addVehicle,
     editVehicle,

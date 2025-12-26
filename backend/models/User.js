@@ -12,7 +12,8 @@ const userSchema = new mongoose.Schema({
     isVerified: { type: Boolean, default: false },
     otp: { type: String },
     otpExpires: { type: Date },
-    isActive: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: true },
+    profilePic: { type: String, default: "" }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

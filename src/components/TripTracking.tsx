@@ -298,22 +298,6 @@ export default function TripTracking() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm font-medium">Avg. Efficiency</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {trips.length > 0 ? (
-                  trips.reduce((sum, trip) => sum + (trip.end_mileage - trip.start_mileage), 0) /
-                  trips.reduce((sum, trip) => sum + (trip.fuel_consumed || 1), 0)
-                ).toFixed(1) : '0'} km/L
-              </p>
-            </div>
-            <div className="p-3 rounded-lg bg-purple-500">
-              <Car className="h-6 w-6 text-white" />
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Filters - Only show for fleet owners */}

@@ -6,6 +6,7 @@ export interface User {
   created_at?: string;
   fleet_owner_id?: string;
   assignedVehicle?: string | null;
+  profilePic?: string;
 }
 
 export interface Vehicle {
