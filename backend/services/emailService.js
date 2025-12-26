@@ -9,7 +9,18 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-// Initialize Nodemailer with standard Gmail settings and SHORT timeouts for Render
+// Initialize Nodemailer with Brevo (Primary)
+const brevoTransporter = nodemailer.createTransport({
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false, // TLS
+  auth: {
+    user: process.env.BREVO_USER,
+    pass: process.env.BREVO_PASS,
+  },
+});
+
+// Initialize Nodemailer with standard Gmail settings (Secondary)
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -18,7 +29,7 @@ const transporter = nodemailer.createTransport({
   },
   connectionTimeout: 5000,
   greetingTimeout: 5000,
-  socketTimeout: 8000,
+  socketTimeout: 10000,
 });
 
 // HTML template for OTP email
@@ -37,7 +48,23 @@ async function sendOTP(email, otp, name) {
   try {
     console.log(`📧 Attempting to send OTP to ${email}...`);
 
-    // 1. Try Gmail/Nodemailer FIRST (Allows sending to any email)
+    // 1. Try Brevo FIRST (Most Reliable)
+    if (process.env.BREVO_USER && process.env.BREVO_PASS) {
+      try {
+        await brevoTransporter.sendMail({
+          from: `"VehicleTracker" <${process.env.BREVO_USER}>`,
+          to: email,
+          subject: "Your OTP Code",
+          html: createOTPEmailHTML(otp, name),
+        });
+        console.log("✅ Email sent via Brevo");
+        return true;
+      } catch (brevoError) {
+        console.warn(`⚠️ Brevo failed: ${brevoError.message}`);
+      }
+    }
+
+    // 2. Try Gmail/Nodemailer SECOND
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       try {
         await transporter.sendMail({
@@ -46,14 +73,10 @@ async function sendOTP(email, otp, name) {
           subject: "Your OTP Code",
           html: createOTPEmailHTML(otp, name),
         });
-        console.log("✅ Email sent via Gmail/Nodemailer");
+        console.log("✅ Email sent via Gmail");
         return true;
       } catch (gmailError) {
         console.warn(`⚠️ Gmail failed: ${gmailError.message}`);
-        if (gmailError.message.includes("Invalid login")) {
-          console.error("❌ ERROR: Gmail App Password is not accepted. Please verify the password in Render settings.");
-        }
-        console.log("Falling back to Resend if configured...");
       }
     }
 
