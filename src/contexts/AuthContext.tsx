@@ -29,6 +29,8 @@ interface AuthContextType {
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (email: string, otp: string, newPass: string) => Promise<void>;
   logout: () => void;
+  updateProfile: (data: Partial<User>) => Promise<void>;
+  uploadProfilePic: (file: File) => Promise<void>;
   loading: boolean;
   apiLoading: boolean;
 }
@@ -60,6 +62,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: rawUser.role,
       name: rawUser.name,
       assignedVehicle: rawUser.assignedVehicleId || null,
+      profilePic: rawUser.profilePic,
+      phone: rawUser.phone,
+      dob: rawUser.dob,
+      address: rawUser.address,
+      gender: rawUser.gender,
     };
 
     localStorage.setItem("token", token);
@@ -232,6 +239,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     delete axios.defaults.headers.common["Authorization"];
   };
 
+  const updateProfile = async (data: Partial<User>) => {
+    setApiLoading(true);
+    try {
+      const res = await axios.put(`/auth/profile`, data);
+      const updatedUser = { ...user, ...res.data.user } as User;
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || "Update profile failed");
+    } finally {
+      setApiLoading(false);
+    }
+  };
+
+  const uploadProfilePic = async (file: File) => {
+    setApiLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("profilePic", file);
+      const res = await axios.post(`/auth/profile-pic`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const updatedUser = { ...user, profilePic: res.data.profilePic } as User;
+      setUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || "Upload failed");
+    } finally {
+      setApiLoading(false);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -245,6 +284,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         forgotPassword,
         resetPassword,
         logout,
+        updateProfile,
+        uploadProfilePic,
         loading,
         apiLoading,
       }}

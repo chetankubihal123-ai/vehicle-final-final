@@ -302,6 +302,11 @@ exports.getMe = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      profilePic: user.profilePic,
+      phone: user.phone,
+      dob: user.dob,
+      address: user.address,
+      gender: user.gender,
       assignedVehicleId,
     });
   } catch (error) {
@@ -364,6 +369,67 @@ exports.resetPassword = async (req, res) => {
     res.json({ message: "Password reset successful. You can now login." });
   } catch (error) {
     console.error("Reset Password error:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, phone, dob, address, gender } = req.body;
+    const userId = req.user.id;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (name) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    if (dob !== undefined) user.dob = dob;
+    if (address !== undefined) user.address = address;
+    if (gender !== undefined) user.gender = gender;
+
+    await user.save();
+
+    res.json({
+      message: "Profile updated successfully",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profilePic: user.profilePic,
+        phone: user.phone,
+        dob: user.dob,
+        address: user.address,
+        gender: user.gender
+      }
+    });
+  } catch (error) {
+    console.error("Update Profile error:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+exports.updateProfilePic = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const userId = req.user.id;
+    const profilePicPath = `/uploads/profiles/${req.file.filename}`;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { profilePic: profilePicPath },
+      { new: true }
+    );
+
+    res.json({
+      message: "Profile picture updated successfully",
+      profilePic: profilePicPath
+    });
+  } catch (error) {
+    console.error("Update Profile Pic error:", error);
     res.status(500).json({ message: "Server Error" });
   }
 };

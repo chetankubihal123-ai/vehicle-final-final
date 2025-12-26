@@ -13,7 +13,11 @@ const userSchema = new mongoose.Schema({
     otp: { type: String },
     otpExpires: { type: Date },
     isActive: { type: Boolean, default: true },
-    profilePic: { type: String, default: "" }
+    profilePic: { type: String, default: "" },
+    phone: { type: String, default: "" },
+    dob: { type: String, default: "" },
+    address: { type: String, default: "" },
+    gender: { type: String, default: "" }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

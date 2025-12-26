@@ -7,6 +7,10 @@ export interface User {
   fleet_owner_id?: string;
   assignedVehicle?: string | null;
   profilePic?: string;
+  phone?: string;
+  dob?: string;
+  address?: string;
+  gender?: string;
 }
 
 export interface Vehicle {
