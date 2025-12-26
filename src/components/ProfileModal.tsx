@@ -64,7 +64,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
     const profileImageUrl = user?.profilePic
         ? (user.profilePic.startsWith('http') ? user.profilePic : `${API_URL}${user.profilePic}`)
-        : `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name}`;
+        : `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name}&mood[]=smiling&backgroundType[]=gradientLinear,gradientMesh`;
 
     return (
         <AnimatePresence>

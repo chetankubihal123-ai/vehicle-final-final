@@ -163,7 +163,7 @@ export default function Layout({ children, activeTab, onTabChange }: LayoutProps
             >
               <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-indigo-500/20">
                 <img
-                  src={user?.profilePic ? (user.profilePic.startsWith('http') ? user.profilePic : `${API_URL}${user.profilePic}`) : `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name}`}
+                  src={user?.profilePic ? (user.profilePic.startsWith('http') ? user.profilePic : `${API_URL}${user.profilePic}`) : `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name}&mood[]=smiling&backgroundType[]=gradientLinear,gradientMesh`}
                   alt={user?.name}
                   className="w-full h-full object-cover"
                 />

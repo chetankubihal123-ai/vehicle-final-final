@@ -209,7 +209,7 @@ export default function DriverManagement() {
           >
             <div className="flex items-center gap-4">
               <img
-                src={driver.userId.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.userId.name}`}
+                src={driver.userId.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.userId.name}&mood[]=smiling&backgroundType[]=gradientLinear,gradientMesh`}
                 alt={driver.userId.name}
                 className="w-12 h-12 rounded-full border shadow-sm object-cover"
               />
