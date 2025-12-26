@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, Car, Truck, Bus, Bike, Circle } from "lucide-react";
+import { Plus, Edit2, Trash2, Circle } from "lucide-react";
 import { useVehicles } from "../hooks/useVehicles";
 import { Vehicle } from "../types";
 import { format, parseISO } from "date-fns";
