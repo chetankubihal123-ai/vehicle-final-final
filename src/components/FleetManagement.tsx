@@ -396,7 +396,7 @@ export default function FleetManagement() {
                         >
                             <div className="relative">
                                 <img
-                                    src={driver.userId.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.userId.name}&mood[]=smiling&backgroundType[]=gradientLinear,gradientMesh`}
+                                    src={driver.userId.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.userId.name}&mood=smiling&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`}
                                     alt={driver.userId.name}
                                     className="w-16 h-16 rounded-full border-2 border-white shadow-sm object-cover"
                                 />

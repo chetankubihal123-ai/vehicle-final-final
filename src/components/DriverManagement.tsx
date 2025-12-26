@@ -231,7 +231,7 @@ export default function DriverManagement() {
                   <div className="relative">
                     <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-white shadow-lg bg-gray-50 flex items-center justify-center">
                       <img
-                        src={driver.userId.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.userId.name}&mood[]=smiling&backgroundType[]=gradientLinear,gradientMesh`}
+                        src={driver.userId.profilePic || `https://api.dicebear.com/7.x/avataaars/svg?seed=${driver.userId.name}&mood=smiling&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`}
                         alt={driver.userId.name}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
