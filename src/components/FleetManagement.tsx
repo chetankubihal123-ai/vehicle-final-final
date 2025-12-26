@@ -311,9 +311,9 @@ export default function FleetManagement() {
                                 >
                                     <div className="flex items-start justify-between">
                                         <div>
-                                            <p className="font-bold text-gray-900">{vehicle.vehicle_number}</p>
-                                            <p className="text-sm text-gray-600">
-                                                {vehicle.make} {vehicle.model}
+                                            <p className="font-bold text-gray-900">{vehicle.make} {vehicle.model}</p>
+                                            <p className="text-sm font-semibold text-indigo-600">
+                                                {vehicle.vehicle_number}
                                             </p>
                                             <p className="text-xs text-red-600 mt-2">
                                                 {daysSinceService

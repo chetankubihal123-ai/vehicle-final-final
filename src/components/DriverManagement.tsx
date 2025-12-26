@@ -449,7 +449,7 @@ export default function DriverManagement() {
                           <option value="">No Vehicle Assigned</option>
                           {vehicles.map((v) => (
                             <option key={v._id} value={v._id}>
-                              {v.registrationNumber} - {v.make}
+                              {v.registrationNumber} - {v.make} {v.model}
                             </option>
                           ))}
                         </select>

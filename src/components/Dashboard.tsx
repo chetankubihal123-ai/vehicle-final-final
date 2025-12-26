@@ -49,26 +49,32 @@ const VEHICLE_IMAGES = {
 // Resolve correct image based on vehicle type
 const vehicleImageFor = (vehicle: AnyVehicle) => {
   const rawType = (
-    vehicle.type ||
     vehicle.vehicle_type ||
-    vehicle.make ||
+    vehicle.type ||
     ""
   ).toLowerCase();
 
+  const rawMake = (vehicle.make || "").toLowerCase();
+  const rawModel = (vehicle.model || "").toLowerCase();
+
+  const combined = `${rawType} ${rawMake} ${rawModel}`;
+
   if (
-    rawType.includes("bike") ||
-    rawType.includes("scooter") ||
-    rawType.includes("activa") ||
-    rawType.includes("motorcycle")
+    combined.includes("bike") ||
+    combined.includes("scooter") ||
+    combined.includes("activa") ||
+    combined.includes("motorcycle") ||
+    combined.includes("two wheeler") ||
+    combined.includes("2 wheeler")
   ) {
-    return vehicle.image || VEHICLE_IMAGES.bike;
+    return vehicle.image || "https://images.unsplash.com/photo-1558981403-c5f91cbba527?q=80&w=1200&auto=format&fit=crop"; // Better motorcycle image
   }
 
-  if (rawType.includes("truck") || rawType.includes("lorry")) {
+  if (combined.includes("truck") || combined.includes("lorry") || combined.includes("pickup")) {
     return vehicle.image || VEHICLE_IMAGES.truck;
   }
 
-  if (rawType.includes("bus")) {
+  if (combined.includes("bus") || combined.includes("van") || combined.includes("tempo")) {
     return vehicle.image || VEHICLE_IMAGES.bus;
   }
 
@@ -265,7 +271,7 @@ export default function Dashboard() {
           id: vehicleId,
           distance,
           vehicle_number: vehicle?.vehicle_number || "Unknown",
-          makeModel: vehicle ? `${vehicle.make} ${vehicle.model}` : "",
+          makeModel: vehicle ? `${vehicle.make} ${vehicle.model}` : "Unknown Vehicle",
         };
       })
       .sort((a, b) => b.distance - a.distance)
@@ -418,36 +424,33 @@ export default function Dashboard() {
                     className="h-14 w-20 flex-shrink-0 rounded-lg object-cover"
                   />
                   <div className="flex-1">
-                    <p className="text-sm font-semibold text-slate-900">
-                      {v.vehicle_number}
-                    </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-sm font-bold text-slate-900">
                       {v.make} {v.model}
                     </p>
-                    <p className="mt-1 text-[11px] text-slate-400">
-                      Type:{" "}
-                      {v.vehicle_type || v.type || "N/A"} • Fuel:{" "}
-                      {v.fuel_type || v.fuelType || "N/A"}
+                    <p className="text-xs font-medium text-indigo-600">
+                      {v.vehicle_number}
+                    </p>
+                    <p className="mt-1 text-[11px] text-slate-400 capitalize">
+                      {v.vehicle_type || v.type || "car"} • {v.fuel_type || v.fuelType || "petrol"}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                        v.status === "active"
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${v.status === "active"
                           ? "bg-emerald-100 text-emerald-700"
                           : v.status === "maintenance"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-slate-100 text-slate-600"
-                      }`}
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
                     >
                       {v.status || "Unknown"}
                     </span>
                     <span className="text-[11px] text-slate-400">
                       {v.service_due_date
                         ? `Service: ${format(
-                            parseISO(v.service_due_date),
-                            "MMM dd"
-                          )}`
+                          parseISO(v.service_due_date),
+                          "MMM dd"
+                        )}`
                         : "Service: N/A"}
                     </span>
                   </div>
@@ -622,11 +625,11 @@ export default function Dashboard() {
                     className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2"
                   >
                     <div>
-                      <p className="font-semibold text-slate-900">
-                        {v.vehicle_number}
-                      </p>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="font-bold text-slate-900">
                         {v.makeModel}
+                      </p>
+                      <p className="text-[11px] font-medium text-indigo-600">
+                        {v.vehicle_number}
                       </p>
                     </div>
                     <p className="text-[11px] font-semibold text-indigo-600">
@@ -667,8 +670,11 @@ export default function Dashboard() {
                         <p className="font-semibold text-slate-900">
                           {trip.start_location} → {trip.end_location}
                         </p>
-                        <p className="text-[11px] text-slate-500">
-                          {vehicle?.vehicle_number || "Unknown"} •{" "}
+                        <p className="text-[11px] font-medium text-indigo-600">
+                          {vehicle ? `${vehicle.make} ${vehicle.model}` : "Unknown"}
+                          <span className="mx-1.5 text-slate-300">•</span>
+                          {vehicle?.vehicle_number}
+                          <span className="mx-1.5 text-slate-300">•</span>
                           {format(new Date(trip.trip_date), "MMM dd")}
                         </p>
                       </div>
