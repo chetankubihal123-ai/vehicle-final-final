@@ -9,19 +9,16 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-// Initialize Nodemailer with alternative host and pooled connection
+// Initialize Nodemailer with standard Gmail settings and SHORT timeouts for Render
 const transporter = nodemailer.createTransport({
-  host: "smtp.googlemail.com",
-  port: 465,
-  secure: true,
-  pool: true, // Use a pool for multiple sends
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  tls: {
-    rejectUnauthorized: false
-  }
+  connectionTimeout: 5000,
+  greetingTimeout: 5000,
+  socketTimeout: 8000,
 });
 
 // HTML template for OTP email
@@ -62,14 +59,29 @@ async function sendOTP(email, otp, name) {
 
     // 2. Try Resend as Fallback
     if (resend) {
-      const data = await resend.emails.send({
-        from: "VehicleTracker <onboarding@resend.dev>",
-        to: email,
-        subject: "Your OTP Code",
-        html: createOTPEmailHTML(otp, name),
-      });
-      console.log("✅ Email sent via Resend:", data);
-      return true;
+      try {
+        console.log("🔄 Falling back to Resend API...");
+        const response = await resend.emails.send({
+          from: "VehicleTracker <onboarding@resend.dev>",
+          to: email,
+          subject: "Your OTP Code",
+          html: createOTPEmailHTML(otp, name),
+        });
+
+        if (response.error) {
+          console.error("❌ Resend API Error:", response.error.message);
+          if (response.error.message.includes("testing emails to your own email address")) {
+            console.error("⚠️ RESEND RESTRICTION: You can only test with your own email (chetankubihal123@gmail.com) until you verify a domain or add authorized recipients.");
+          }
+          return false;
+        }
+
+        console.log("✅ Email sent via Resend API");
+        return true;
+      } catch (resendError) {
+        console.error("❌ Resend Fatal Error:", resendError.message);
+        return false;
+      }
     }
 
     console.error("❌ No email service configured (Resend or Gmail).");
