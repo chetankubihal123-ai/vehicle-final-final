@@ -39,14 +39,25 @@ export default function VehicleManagement() {
     }
   }, [formData.make]);
 
-  const getVehicleIcon = (type: Vehicle["vehicle_type"]) => {
-    switch (type.toLowerCase()) {
-      case "car": return Car;
-      case "truck": return Truck;
-      case "bus": return Bus;
-      case "two_wheeler": return Bike;
-      default: return Car;
+  const getVehicleImage = (type: string, make: string = "", model: string = "") => {
+    const combined = `${type} ${make} ${model}`.toLowerCase();
+
+    if (combined.includes("scooter") || combined.includes("activa") || combined.includes("dio")) {
+      return "https://img.icons8.com/fluency/240/scooter.png";
     }
+    if (combined.includes("bike") || combined.includes("motorcycle") || combined.includes("two_wheeler") || combined.includes("2 wheeler")) {
+      return "https://img.icons8.com/fluency/240/motorcycle.png";
+    }
+    if (combined.includes("truck") || combined.includes("lorry") || combined.includes("pickup") || combined.includes("tata")) {
+      return "https://img.icons8.com/fluency/240/truck.png";
+    }
+    if (combined.includes("bus") || combined.includes("coach") || combined.includes("traveller")) {
+      return "https://img.icons8.com/fluency/240/bus.png";
+    }
+    if (combined.includes("van") || combined.includes("tempo") || combined.includes("omni") || combined.includes("eeco")) {
+      return "https://img.icons8.com/fluency/240/shuttle-bus.png";
+    }
+    return "https://img.icons8.com/fluency/240/car.png";
   };
 
   const getStatusColor = (status: Vehicle["status"]) => {
@@ -127,14 +138,17 @@ export default function VehicleManagement() {
 
   // VEHICLE CARD
   const VehicleCard = ({ vehicle }: { vehicle: Vehicle }) => {
-    const Icon = getVehicleIcon(vehicle.vehicle_type);
 
     return (
       <div className="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition">
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Icon className="h-6 w-6 text-blue-600" />
+          <div className="flex items-center space-x-4">
+            <div className="h-14 w-14 flex-shrink-0 flex items-center justify-center bg-slate-100 rounded-xl">
+              <img
+                src={getVehicleImage(vehicle.vehicle_type, vehicle.make, vehicle.model)}
+                alt={vehicle.vehicle_type}
+                className="h-10 w-10 object-contain"
+              />
             </div>
             <div>
               <h3 className="font-semibold text-gray-900">{vehicle.vehicle_number}</h3>

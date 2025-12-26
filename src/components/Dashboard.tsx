@@ -45,39 +45,41 @@ const VEHICLE_IMAGES = {
 };
 
 // Resolve correct image based on vehicle type
+// Resolve correct image based on vehicle type
 const vehicleImageFor = (vehicle: AnyVehicle) => {
-  const rawType = (
-    vehicle.vehicle_type ||
-    vehicle.type ||
-    ""
-  ).toLowerCase();
-
+  const rawType = (vehicle.vehicle_type || vehicle.type || "").toLowerCase();
   const rawMake = (vehicle.make || "").toLowerCase();
   const rawModel = (vehicle.model || "").toLowerCase();
 
   const combined = `${rawType} ${rawMake} ${rawModel}`;
 
+  if (combined.includes("scooter") || combined.includes("activa") || combined.includes("dio")) {
+    return VEHICLE_IMAGES.scooter;
+  }
+
   if (
     combined.includes("bike") ||
-    combined.includes("scooter") ||
-    combined.includes("activa") ||
     combined.includes("motorcycle") ||
     combined.includes("two wheeler") ||
     combined.includes("2 wheeler")
   ) {
-    return vehicle.image || "https://images.unsplash.com/photo-1558981403-c5f91cbba527?q=80&w=1200&auto=format&fit=crop"; // Better motorcycle image
+    return VEHICLE_IMAGES.bike;
   }
 
-  if (combined.includes("truck") || combined.includes("lorry") || combined.includes("pickup")) {
-    return vehicle.image || VEHICLE_IMAGES.truck;
+  if (combined.includes("truck") || combined.includes("lorry") || combined.includes("pickup") || combined.includes("tata")) {
+    return VEHICLE_IMAGES.truck;
   }
 
-  if (combined.includes("bus") || combined.includes("van") || combined.includes("tempo")) {
-    return vehicle.image || VEHICLE_IMAGES.bus;
+  if (combined.includes("bus") || combined.includes("coach") || combined.includes("traveller")) {
+    return VEHICLE_IMAGES.bus;
+  }
+
+  if (combined.includes("van") || combined.includes("tempo") || combined.includes("omni") || combined.includes("eeco")) {
+    return VEHICLE_IMAGES.van;
   }
 
   // default: car
-  return vehicle.image || VEHICLE_IMAGES.car;
+  return VEHICLE_IMAGES.car;
 };
 
 // Small stat card
@@ -724,11 +726,13 @@ export default function Dashboard() {
               className="flex items-center justify-between rounded-xl border border-amber-100 bg-amber-50 px-3 py-3"
             >
               <div className="flex items-center gap-3">
-                <img
-                  src={vehicleImageFor(v)}
-                  alt=""
-                  className="h-10 w-16 rounded-lg object-cover"
-                />
+                <div className="h-10 w-16 flex-shrink-0 flex items-center justify-center bg-white rounded-lg shadow-sm">
+                  <img
+                    src={vehicleImageFor(v)}
+                    alt=""
+                    className="h-7 w-7 object-contain"
+                  />
+                </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-900">
                     {v.vehicle_number}
