@@ -9,15 +9,24 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-// Initialize Nodemailer with Brevo (Primary)
+// Initialize Nodemailer with Brevo (Primary) - PORT 465 IS FASTER
 const brevoTransporter = nodemailer.createTransport({
   host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false, // TLS
+  port: 465,
+  secure: true, // SSL
   auth: {
     user: process.env.BREVO_USER,
     pass: process.env.BREVO_PASS,
   },
+  connectionTimeout: 4000,
+  greetingTimeout: 4000,
+  socketTimeout: 8000,
+});
+
+console.log("🛠️ Email Service Status:", {
+  hasBrevo: !!(process.env.BREVO_USER && process.env.BREVO_PASS),
+  hasGmail: !!(process.env.EMAIL_USER && process.env.EMAIL_PASS),
+  hasResend: !!process.env.RESEND_API_KEY
 });
 
 // Initialize Nodemailer with standard Gmail settings (Secondary)
@@ -27,9 +36,9 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  connectionTimeout: 5000,
-  greetingTimeout: 5000,
-  socketTimeout: 10000,
+  connectionTimeout: 4000,
+  greetingTimeout: 4000,
+  socketTimeout: 8000,
 });
 
 // HTML template for OTP email
