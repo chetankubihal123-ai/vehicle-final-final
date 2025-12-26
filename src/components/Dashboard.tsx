@@ -8,7 +8,6 @@ import {
   Activity,
   Gauge,
   Calendar,
-  Filter,
   TrendingUp,
   Fuel,
   Wrench,

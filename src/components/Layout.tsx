@@ -15,7 +15,9 @@ import {
   Radio,
   User as UserIcon,
   ChevronDown,
-  Settings
+  Settings,
+  Phone,
+  Mail
 } from 'lucide-react';
 import ProfileModal from './ProfileModal';
 import { API_URL } from '../config';
@@ -232,8 +234,38 @@ export default function Layout({ children, activeTab, onTabChange }: LayoutProps
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto p-4 md:p-6">
-          {children}
+        <main className="flex-1 overflow-auto p-4 md:p-6 flex flex-col">
+          <div className="flex-1">
+            {children}
+          </div>
+
+          <footer className="mt-auto pt-8 pb-4">
+            <div className="border-t border-gray-100 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs lg:text-sm text-gray-400">
+              <div className="flex flex-col items-center md:items-start text-center md:text-left">
+                <div className="flex items-center gap-2 mb-1">
+                  <Car className="h-4 w-4 text-indigo-500" />
+                  <span className="font-bold text-gray-900 tracking-tight">VehicleTracker</span>
+                </div>
+                <p className="font-medium whitespace-nowrap">Copyright © 2025. All rights reserved.</p>
+              </div>
+
+              <div className="flex flex-col items-center md:items-end gap-2">
+                <div className="bg-indigo-50 px-3 py-1 rounded-full">
+                  <span className="text-indigo-600 font-bold">Web Creator: Chetan K</span>
+                </div>
+                <div className="flex flex-wrap justify-center md:justify-end gap-x-4 gap-y-1">
+                  <a href="tel:9916463062" className="flex items-center gap-1.5 hover:text-indigo-600 transition-colors group">
+                    <Phone className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium">9916463062</span>
+                  </a>
+                  <a href="mailto:chetankubihal123@gmail.com" className="flex items-center gap-1.5 hover:text-indigo-600 transition-colors group">
+                    <Mail className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
+                    <span className="font-medium">chetankubihal123@gmail.com</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </footer>
         </main>
       </div>
 
