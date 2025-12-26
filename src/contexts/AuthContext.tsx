@@ -26,6 +26,8 @@ interface AuthContextType {
   resendOTP: (email: string) => Promise<void>;
   sendLoginOTP: (email: string) => Promise<void>;
   verifyLoginOTP: (email: string, otp: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string, otp: string, newPass: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
   apiLoading: boolean;
@@ -196,6 +198,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // FORGOT PASSWORD
+  const forgotPassword = async (email: string) => {
+    setApiLoading(true);
+    try {
+      await axios.post(`/auth/forgot-password`, { email });
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || "Failed to send reset code");
+    } finally {
+      setApiLoading(false);
+    }
+  };
+
+  // RESET PASSWORD
+  const resetPassword = async (email: string, otp: string, newPass: string) => {
+    setApiLoading(true);
+    try {
+      await axios.post(`/auth/reset-password`, {
+        email,
+        otp,
+        newPassword: newPass,
+      });
+    } catch (err: any) {
+      throw new Error(err.response?.data?.message || "Reset failed");
+    } finally {
+      setApiLoading(false);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.clear();
@@ -212,6 +242,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resendOTP,
         sendLoginOTP,
         verifyLoginOTP,
+        forgotPassword,
+        resetPassword,
         logout,
         loading,
         apiLoading,

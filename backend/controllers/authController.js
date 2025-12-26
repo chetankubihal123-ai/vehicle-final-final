@@ -309,3 +309,61 @@ exports.getMe = async (req, res) => {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
+// --- PASSWORD RESET ---
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).json({ message: "No account found with this email" });
+    if (!user.isActive) return res.status(403).json({ message: "Account is inactive" });
+
+    const otp = generateOTP();
+    const otpExpires = Date.now() + 10 * 60 * 1000;
+
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    console.log("🔑 Password Reset OTP for:", email);
+    const sent = await sendOTP(email, otp, user.name);
+    if (!sent) {
+      return res.status(500).json({ message: "Failed to send reset code. Try again later." });
+    }
+
+    res.json({ message: "Reset code sent to your email." });
+  } catch (error) {
+    console.error("Forgot Password error:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.otp !== otp || user.otpExpires < Date.now()) {
+      return res.status(400).json({ message: "Invalid or expired reset code" });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    user.password = hashedPassword;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    if (!user.isVerified) user.isVerified = true;
+
+    await user.save();
+
+    res.json({ message: "Password reset successful. You can now login." });
+  } catch (error) {
+    console.error("Reset Password error:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};

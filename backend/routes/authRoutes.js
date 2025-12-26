@@ -9,6 +9,8 @@ const {
   sendLoginOTP,
   verifyLoginOTP,
   getMe,
+  forgotPassword,
+  resetPassword,
 } = require("../controllers/authController");
 
 router.post("/register", register);
@@ -18,6 +20,8 @@ router.post("/resend-otp", resendOTP);
 router.post("/login", login);
 router.post("/send-login-otp", sendLoginOTP);
 router.post("/verify-login-otp", verifyLoginOTP);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 router.get("/me", auth(["admin", "fleet_owner", "driver"]), getMe);
 

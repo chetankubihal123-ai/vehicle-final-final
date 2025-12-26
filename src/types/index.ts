@@ -3,8 +3,9 @@ export interface User {
   email: string;
   name: string;
   role: 'personal' | 'fleet_owner' | 'driver';
-  created_at: string;
+  created_at?: string;
   fleet_owner_id?: string;
+  assignedVehicle?: string | null;
 }
 
 export interface Vehicle {

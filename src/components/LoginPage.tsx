@@ -20,6 +20,8 @@ export default function LoginPage() {
     resendOTP,
     sendLoginOTP,
     verifyLoginOTP,
+    forgotPassword,
+    resetPassword,
     apiLoading,
   } = useAuth();
 
@@ -42,6 +44,9 @@ export default function LoginPage() {
   const [timer, setTimer] = useState(0);
 
   const [awaitingRegistrationOtp, setAwaitingRegistrationOtp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetStep, setResetStep] = useState(0); // 0: email, 1: otp + new pass
+  const [newPassword, setNewPassword] = useState("");
 
   const [darkMode, setDarkMode] = useState(false);
 
@@ -72,7 +77,26 @@ export default function LoginPage() {
     }
 
     try {
-      if (isLogin) {
+      if (isForgotPassword) {
+        if (resetStep === 0) {
+          await forgotPassword(formData.email);
+          setResetStep(1);
+          setSuccess("Reset code sent to your email.");
+          setTimer(600);
+        } else {
+          if (!newPassword) {
+            setError("Please enter a new password.");
+            return;
+          }
+          await resetPassword(formData.email, otp, newPassword);
+          setSuccess("Password reset successful! You can now login.");
+          setIsForgotPassword(false);
+          setResetStep(0);
+          setOtp("");
+          setNewPassword("");
+          setIsLogin(true);
+        }
+      } else if (isLogin) {
         if (isOtpLogin) {
           if (otpSent) {
             await verifyLoginOTP(formData.email, otp);
@@ -176,8 +200,8 @@ export default function LoginPage() {
       {/* ANIMATED GRADIENT BACKGROUND */}
       <div
         className={`absolute inset-0 animate-gradient-xy ${darkMode
-            ? "bg-gradient-to-br from-slate-950 via-purple-950 to-black"
-            : "bg-gradient-to-br from-[#2E026D] via-[#6A00F5] to-[#C100FF]"
+          ? "bg-gradient-to-br from-slate-950 via-purple-950 to-black"
+          : "bg-gradient-to-br from-[#2E026D] via-[#6A00F5] to-[#C100FF]"
           }`}
       ></div>
 
@@ -480,11 +504,23 @@ export default function LoginPage() {
                     )}
 
                   {/* PASSWORD */}
-                  {!awaitingRegistrationOtp && !isOtpLogin && (
-                    <div>
-                      <label className="block text-gray-700 mb-1">
-                        Password
-                      </label>
+                  {!awaitingRegistrationOtp && !isOtpLogin && !isForgotPassword && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-gray-700">Password</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsForgotPassword(true);
+                            setResetStep(0);
+                            setError("");
+                            setSuccess("");
+                          }}
+                          className="text-xs text-purple-600 hover:text-purple-800 font-medium hover:underline"
+                        >
+                          Forgot Password?
+                        </button>
+                      </div>
                       <div className="relative">
                         <input
                           type={showPassword ? "text" : "password"}
@@ -499,7 +535,6 @@ export default function LoginPage() {
                           className="w-full px-4 py-3 rounded-xl border"
                           placeholder="••••••••"
                         />
-
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
@@ -511,6 +546,76 @@ export default function LoginPage() {
                             <Eye size={20} />
                           )}
                         </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* RESET PASSWORD FLOW */}
+                  {isForgotPassword && resetStep === 1 && (
+                    <div className="space-y-4">
+                      {/* NEW PASSWORD */}
+                      <div>
+                        <label className="block text-gray-700 mb-1">
+                          New Password
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            required
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border"
+                            placeholder="••••••••"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-4 top-3 text-gray-600"
+                          >
+                            {showPassword ? (
+                              <EyeOff size={20} />
+                            ) : (
+                              <Eye size={20} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* OTP FOR RESET */}
+                      <div>
+                        <label className="block text-gray-700 mb-1">
+                          Reset Code (OTP)
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={6}
+                          required
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl border text-center tracking-widest text-xl"
+                          placeholder="000000"
+                        />
+                        <div className="flex justify-between items-center text-xs mt-2">
+                          <p className="text-gray-500">
+                            Expires in {Math.floor(timer / 60)}:
+                            {(timer % 60).toString().padStart(2, "0")}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await forgotPassword(formData.email);
+                                setTimer(600);
+                                setSuccess("New reset code sent!");
+                              } catch (err) {
+                                setError("Failed to resend code");
+                              }
+                            }}
+                            className="text-purple-600 font-semibold"
+                          >
+                            Resend Code
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -550,14 +655,34 @@ export default function LoginPage() {
                       ? "Please wait..."
                       : awaitingRegistrationOtp
                         ? "Verify OTP"
-                        : isLogin
-                          ? isOtpLogin
-                            ? otpSent
-                              ? "Verify OTP"
-                              : "Send OTP"
-                            : "Sign In"
-                          : "Create Account"}
+                        : isForgotPassword
+                          ? resetStep === 0
+                            ? "Send Reset Code"
+                            : "Reset Password"
+                          : isLogin
+                            ? isOtpLogin
+                              ? otpSent
+                                ? "Verify OTP"
+                                : "Send OTP"
+                              : "Sign In"
+                            : "Create Account"}
                   </button>
+
+                  {/* BACK BUTTON FOR FORGOT PASSWORD */}
+                  {isForgotPassword && (
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsForgotPassword(false);
+                          setResetStep(0);
+                        }}
+                        className="text-sm text-gray-500 hover:text-gray-700 font-medium"
+                      >
+                        Back to Login
+                      </button>
+                    </div>
+                  )}
 
                   {/* OTP LOGIN TOGGLE */}
                   {isLogin && !otpSent && (
