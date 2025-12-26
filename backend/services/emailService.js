@@ -9,15 +9,26 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-// Initialize Nodemailer as fallback
+// Initialize Nodemailer with more explicit settings for Gmail
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // use SSL
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  tls: {
-    rejectUnauthorized: false // Fix for some dev environments
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
+});
+
+// Verify connection configuration on startup
+transporter.verify(function (error, success) {
+  if (error) {
+    console.error("❌ Email (Nodemailer) config error:", error.message);
+  } else {
+    console.log("✅ Email (Nodemailer) is ready to send");
   }
 });
 
@@ -49,7 +60,11 @@ async function sendOTP(email, otp, name) {
         console.log("✅ Email sent via Gmail/Nodemailer");
         return true;
       } catch (gmailError) {
-        console.warn("⚠️ Gmail failed, falling back to Resend:", gmailError.message);
+        console.warn(`⚠️ Gmail failed: ${gmailError.message}`);
+        if (gmailError.message.includes("Invalid login")) {
+          console.error("❌ ERROR: Gmail App Password is not accepted. Please verify the password in Render settings.");
+        }
+        console.log("Falling back to Resend if configured...");
       }
     }
 
