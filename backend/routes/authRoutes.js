@@ -16,6 +16,13 @@ const {
 } = require("../controllers/authController");
 const path = require("path");
 const multer = require("multer");
+const fs = require("fs");
+
+// Ensure upload directory exists
+const uploadDir = "uploads/profiles/";
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // Multer config for profile pictures
 const storage = multer.diskStorage({
