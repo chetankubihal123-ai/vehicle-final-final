@@ -60,31 +60,41 @@ async function sendOTP(email, otp, name) {
   try {
     console.log(`📧 Attempting to send OTP to ${email}...`);
 
-    // 1. Try Brevo FIRST (Most Reliable)
-    if (process.env.BREVO_USER && process.env.BREVO_PASS) {
+    // 1. Try Brevo API (HTTP) - MOST RELIABLE ON RENDER
+    if (process.env.BREVO_API_KEY) {
       try {
-        console.log(`🚀 Sending via Brevo to ${email}...`);
-        const info = await brevoTransporter.sendMail({
-          from: `"VehicleTracker" <${process.env.BREVO_USER}>`,
-          to: email,
-          subject: "Your OTP Code",
-          html: createOTPEmailHTML(otp, name),
+        console.log(`🚀 Sending via Brevo API to ${email}...`);
+        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            "accept": "application/json",
+            "api-key": process.env.BREVO_API_KEY,
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            sender: { name: "VehicleTracker", email: process.env.BREVO_USER || "onboarding@brevo.com" },
+            to: [{ email: email }],
+            subject: "Your OTP Code",
+            htmlContent: createOTPEmailHTML(otp, name)
+          })
         });
-        console.log("✅ Email sent via Brevo:", info.messageId);
-        return true;
+
+        const data = await response.json();
+        if (response.ok) {
+          console.log("✅ Email sent via Brevo API:", data.messageId);
+          return true;
+        } else {
+          console.error("❌ Brevo API Error:", data);
+        }
       } catch (brevoError) {
-        console.error("❌ BREVO ERROR DETAIL:", {
-          message: brevoError.message,
-          code: brevoError.code,
-          command: brevoError.command,
-          response: brevoError.response
-        });
+        console.error("❌ Brevo API Fatal Error:", brevoError.message);
       }
     }
 
-    // 2. Try Gmail/Nodemailer SECOND
+    // 2. Try Gmail/Nodemailer SECOND (SMTP - Often blocked on Render)
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
       try {
+        console.log("🔄 Trying Gmail SMTP...");
         await transporter.sendMail({
           from: `"VehicleTracker" <${process.env.EMAIL_USER}>`,
           to: email,
@@ -94,7 +104,7 @@ async function sendOTP(email, otp, name) {
         console.log("✅ Email sent via Gmail");
         return true;
       } catch (gmailError) {
-        console.warn(`⚠️ Gmail failed: ${gmailError.message}`);
+        console.warn(`⚠️ Gmail SMTP failed: ${gmailError.message}`);
       }
     }
 
