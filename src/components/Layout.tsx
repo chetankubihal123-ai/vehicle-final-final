@@ -251,7 +251,7 @@ export default function Layout({ children, activeTab, onTabChange }: LayoutProps
 
               <div className="flex flex-col items-center md:items-end gap-2">
                 <div className="bg-indigo-50 px-3 py-1 rounded-full">
-                  <span className="text-indigo-600 font-bold">Web Creator: Chetan K</span>
+                  <span className="text-indigo-600 font-bold">Web Creator: CARS</span>
                 </div>
                 <div className="flex flex-wrap justify-center md:justify-end gap-x-4 gap-y-1">
                   <a href="tel:9916463062" className="flex items-center gap-1.5 hover:text-indigo-600 transition-colors group">
