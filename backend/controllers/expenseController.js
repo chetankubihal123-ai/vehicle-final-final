@@ -65,3 +65,26 @@ exports.getExpenses = async (req, res) => {
         res.status(500).json({ message: "Server Error", error: error.message });
     }
 };
+
+// Delete expense
+exports.deleteExpense = async (req, res) => {
+    try {
+        const expense = await Expense.findById(req.params.id);
+
+        if (!expense) {
+            return res.status(404).json({ message: "Expense not found" });
+        }
+
+        // Check ownership (optional, but good practice)
+        // if (req.user.role !== 'admin' && expense.loggedBy.toString() !== req.user.id) {
+        //     return res.status(401).json({ message: "Not authorized" });
+        // }
+
+        await Expense.findByIdAndDelete(req.params.id);
+
+        res.json({ message: "Expense removed" });
+    } catch (error) {
+        console.error("Expense Delete Error:", error);
+        res.status(500).json({ message: "Server Error", error: error.message });
+    }
+};

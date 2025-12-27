@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, DollarSign, Receipt, Filter } from "lucide-react";
+import { Plus, DollarSign, Receipt, Filter, Trash2 } from "lucide-react";
 import { useVehicles } from "../hooks/useVehicles";
 import { Expense } from "../types";
 import { format, parseISO } from "date-fns";
@@ -120,12 +120,23 @@ export default function ExpenseManagement() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this expense?")) return;
+    try {
+      await axios.delete(`/expenses/${id}`);
+      window.location.reload();
+    } catch (err) {
+      console.error("Error deleting expense:", err);
+      alert("Failed to delete expense");
+    }
+  };
+
   // Expense Card
   const ExpenseCard = ({ expense }: { expense: Expense }) => {
     const vehicle = vehicles.find((v) => v.id === expense.vehicle_id);
 
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow relative group">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div
@@ -154,17 +165,28 @@ export default function ExpenseManagement() {
             </div>
           </div>
 
-          <div className="text-right">
-            <p className="text-xl font-bold text-gray-900">
-              ₹{expense.amount.toLocaleString()}
-            </p>
+          <div className="flex items-center gap-2">
             <span
-              className={`inline-flex px-2 py-1 rounded-full text-xs font-medium capitalize ${getCategoryColor(
+              className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider ${getCategoryColor(
                 expense.category
               )}`}
             >
               {expense.category}
             </span>
+
+            {/* Delete Button for Owners */}
+            {user?.role === "fleet_owner" && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(expense.id || (expense as any)._id);
+                }}
+                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                title="Delete Expense"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
 

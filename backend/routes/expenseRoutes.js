@@ -8,7 +8,7 @@ const path = require('path');
 // FIXED: Save uploads inside backend/uploads (correct real path)
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, "..", "uploads")); 
+        cb(null, path.join(__dirname, "..", "uploads"));
     },
     filename: (req, file, cb) => {
         const ext = path.extname(file.originalname);
@@ -37,5 +37,7 @@ router.post(
 );
 
 router.get('/', auth(['fleet_owner', 'admin', 'driver']), getExpenses);
+
+router.delete('/:id', auth(['fleet_owner', 'admin']), require('../controllers/expenseController').deleteExpense);
 
 module.exports = router;
