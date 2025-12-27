@@ -336,15 +336,15 @@ export default function LoginPage() {
                 <motion.img
                   src="/welcome_avatar.png"
                   alt="Welcome"
-                  className="w-72 h-72 mx-auto drop-shadow-[0_20px_30px_rgba(0,0,0,0.3)] relative z-10"
+                  className="w-72 h-72 mx-auto drop-shadow-[0_20px_30px_rgba(15,23,42,0.2)] relative z-10"
+                  style={{ mixBlendMode: 'multiply' }}
                   animate={{
-                    y: [0, -15, 0],
-                    rotate: [0, 1.5, -1.5, 0]
+                    rotate: [0, 8, -8, 8, -8, 0],
+                    y: [0, -5, 0]
                   }}
                   transition={{
-                    duration: 5,
-                    repeat: Infinity,
-                    ease: "easeInOut"
+                    rotate: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
+                    y: { duration: 4, repeat: Infinity, ease: "easeInOut" }
                   }}
                 />
               </div>
