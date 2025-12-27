@@ -51,18 +51,24 @@ export default function TripTracking() {
   // Auto-fetch assigned vehicle for drivers
   useEffect(() => {
     if (user?.role === 'driver') {
-      // Try to find vehicle immediately from loaded vehicles
-      if (user.assignedVehicle) {
-        const found = vehicles.find(v => v.id === user.assignedVehicle);
-        if (found) {
-          setAssignedVehicle(found);
-          setSelectedVehicleForTracking(found.id);
-          setFormData(prev => ({ ...prev, vehicle_id: found.id }));
-          return;
-        }
+      // Priority 1: Use persisted details immediately
+      if (user.assignedVehicleDetails?._id) {
+        setFormData(prev => ({ ...prev, vehicle_id: user.assignedVehicleDetails!._id }));
+        setSelectedVehicleForTracking(user.assignedVehicleDetails!._id);
+        return;
       }
 
-      // Fallback: fetch from API if not found (or if user.assignedVehicle is missing but DB has it)
+      // Priority 2: Use assignedVehicle ID if available
+      if (user.assignedVehicle) {
+        setFormData(prev => ({ ...prev, vehicle_id: user.assignedVehicle! }));
+        setSelectedVehicleForTracking(user.assignedVehicle!);
+
+        const found = vehicles.find(v => v.id === user.assignedVehicle);
+        if (found) setAssignedVehicle(found);
+        return;
+      }
+
+      // Priority 3: Fallback to API
       const fetchMyVehicle = async () => {
         try {
           const res = await axios.get('/drivers/me/vehicle');
@@ -81,7 +87,7 @@ export default function TripTracking() {
         fetchMyVehicle();
       }
     }
-  }, [user, vehicles.length]); // Add vehicles.length dependency to retry calculation when vehicles load
+  }, [user, vehicles]); // Add vehicles dependency to retry calculation when vehicles load
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

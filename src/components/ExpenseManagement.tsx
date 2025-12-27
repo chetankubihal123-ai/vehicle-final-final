@@ -24,21 +24,26 @@ export default function ExpenseManagement() {
   });
 
   // Auto-fetch assigned vehicle for drivers
+  // Auto-fetch assigned vehicle for drivers
   useEffect(() => {
     if (user?.role === "driver") {
-      // Try to find vehicle immediately from loaded vehicles
-      if (user.assignedVehicle) {
-        const found = vehicles.find((v) => v.id === user.assignedVehicle);
-        if (found) {
-          setAssignedVehicle(found);
-          setFormData((prev) => ({
-            ...prev,
-            vehicle_id: found.id,
-          }));
-          return;
-        }
+      // Priority 1: Use persisted details immediately
+      if (user.assignedVehicleDetails?._id) {
+        setFormData(prev => ({ ...prev, vehicle_id: user.assignedVehicleDetails!._id }));
+        return;
       }
 
+      // Priority 2: Use assignedVehicle ID if available
+      if (user.assignedVehicle) {
+        setFormData(prev => ({ ...prev, vehicle_id: user.assignedVehicle! }));
+
+        // Try to load full object for display if possible
+        const found = vehicles.find((v) => v.id === user.assignedVehicle);
+        if (found) setAssignedVehicle(found);
+        return;
+      }
+
+      // Priority 3: Fallback to API
       axios.get("/drivers/me/vehicle").then((res) => {
         if (res.data.vehicle) {
           setAssignedVehicle(res.data.vehicle);
@@ -49,7 +54,7 @@ export default function ExpenseManagement() {
         }
       });
     }
-  }, [user, vehicles.length]);
+  }, [user, vehicles]);
 
   // Auto-select vehicle if only one exists
   useEffect(() => {
