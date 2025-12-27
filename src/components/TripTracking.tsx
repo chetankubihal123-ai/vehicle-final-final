@@ -385,11 +385,18 @@ export default function TripTracking() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Vehicle
                   </label>
-                  {user?.role === 'driver' && assignedVehicle ? (
-                    <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-semibold flex items-center justify-between">
-                      <span>{assignedVehicle.registrationNumber} - {assignedVehicle.make} {assignedVehicle.model}</span>
-                      <span className="text-xs text-purple-600 font-bold uppercase tracking-wider bg-purple-50 px-2 py-0.5 rounded">Assigned</span>
-                    </div>
+                  {user?.role === 'driver' ? (
+                    assignedVehicle ? (
+                      <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-semibold flex items-center justify-between">
+                        <span>{assignedVehicle.registrationNumber} - {assignedVehicle.make} {assignedVehicle.model}</span>
+                        <span className="text-xs text-purple-600 font-bold uppercase tracking-wider bg-purple-50 px-2 py-0.5 rounded">Assigned</span>
+                      </div>
+                    ) : (
+                      <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 flex items-center gap-2">
+                        <div className="h-4 w-4 border-2 border-gray-300 border-t-purple-600 rounded-full animate-spin"></div>
+                        <span>Loading assigned vehicle...</span>
+                      </div>
+                    )
                   ) : (
                     <select
                       required

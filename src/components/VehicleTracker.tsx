@@ -45,9 +45,10 @@ function MapController({ center }: { center: [number, number] }) {
 interface Props {
   vehicleId: string;
   vehicleName: string;
+  onSaveTrip?: (data: { startTime: Date; distance: number; startLocation: string; endLocation: string }) => void;
 }
 
-export default function VehicleTracker({ vehicleId, vehicleName }: Props) {
+export default function VehicleTracker({ vehicleId, vehicleName, onSaveTrip }: Props) {
   // Start with neutral default; will be overwritten as soon as we have real data
   const [currentLocation, setCurrentLocation] = useState<VehicleLocation>({
     lat: 12.9716,
