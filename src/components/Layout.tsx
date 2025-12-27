@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import ProfileModal from './ProfileModal';
 import { API_URL } from '../config';
+import { socket } from '../socket'; // Add socket import
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -60,6 +61,55 @@ export default function Layout({ children, activeTab, onTabChange }: LayoutProps
   };
 
   const navigationItems = getNavigationItems();
+
+  // NOTIFICATION LOGIC
+  React.useEffect(() => {
+    if (!user) return;
+
+    // 1. Connect socket
+    socket.auth = { token: localStorage.getItem("token") };
+    if (!socket.connected) socket.connect();
+
+    // 2. Join owner room
+    if (user.role === 'fleet_owner' || user.role === 'admin') {
+      socket.emit("join_owner_room");
+      console.log("Joined owner room");
+    }
+
+    // 3. Listen for alerts
+    const onTrackingStarted = (data: any) => {
+      // Create a native notification or toast
+      // For now, simpler: alert + sound
+      const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+      audio.play().catch(e => console.error("Audio play failed", e));
+
+      // We can also use a custom toast if available, or just browser notification
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("Driver Tracking Started", {
+          body: `${data.driverName} started tracking vehicle ${data.vehicleNumber}`,
+          icon: "/icon.png" // optional
+        });
+      } else if ("Notification" in window && Notification.permission !== "denied") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            new Notification("Driver Tracking Started", {
+              body: `${data.driverName} started tracking vehicle ${data.vehicleNumber}`,
+            });
+          }
+        });
+      }
+
+      // Fallback or additional in-app UI can go here?
+      // For this request, "popup notification alert" -> Browser Notification is best
+      alert(`🔔 ALERT: ${data.driverName} just started tracking ${data.vehicleNumber}!`);
+    };
+
+    socket.on("alert_tracking_started", onTrackingStarted);
+
+    return () => {
+      socket.off("alert_tracking_started", onTrackingStarted);
+    };
+  }, [user]);
 
   const Sidebar = ({ className = '' }: { className?: string }) => (
     <div className={`bg-white shadow-lg h-full flex flex-col ${className}`}>

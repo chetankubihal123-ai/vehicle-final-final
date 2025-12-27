@@ -101,13 +101,25 @@ io.use((socket, next) => {
 // -----------------------------
 // SOCKET.IO HANLDERS
 // -----------------------------
+// ... imports
 const LiveLocation = require("./models/LiveLocation");
 const RouteHistory = require("./models/RouteHistory");
+const Vehicle = require("./models/Vehicle"); // Added Vehicle model
 
 io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id, "role:", socket.user?.role);
 
+  // OWNER: Join personal notification room
+  socket.on("join_owner_room", () => {
+    if (["fleet_owner", "admin"].includes(socket.user.role)) {
+      const room = `owner_${socket.user.id}`;
+      socket.join(room);
+      console.log(`[SOCKET] Owner ${socket.user.id} joined room ${room}`);
+    }
+  });
+
   socket.on("join_vehicle", async (vehicleId) => {
+    // ... existing join_vehicle logic
     try {
       if (!["fleet_owner", "admin"].includes(socket.user.role)) return;
 
@@ -128,9 +140,6 @@ io.on("connection", (socket) => {
         });
       }
 
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-
       const history = await RouteHistory.findOne({
         vehicleId,
         isActive: true,
@@ -150,7 +159,30 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("driver_start_tracking", async (data) => {
+    try {
+      const { vehicleId } = data;
+      if (!vehicleId) return;
+
+      // Find vehicle to get owner
+      const vehicle = await Vehicle.findById(vehicleId);
+      if (vehicle && vehicle.ownerId) {
+        const ownerRoom = `owner_${vehicle.ownerId}`;
+        io.to(ownerRoom).emit("alert_tracking_started", {
+          vehicleId,
+          vehicleNumber: vehicle.registrationNumber,
+          driverName: socket.user.name,
+          timestamp: new Date()
+        });
+        console.log(`[SOCKET] Alert sent to ${ownerRoom} for vehicle ${vehicle.registrationNumber}`);
+      }
+    } catch (error) {
+      console.error("driver_start_tracking error:", error);
+    }
+  });
+
   socket.on("send_location", async (data) => {
+    // ... existing send_location logic
     try {
       if (socket.user.role !== "driver") return;
 
@@ -177,9 +209,6 @@ io.on("connection", (socket) => {
         { vehicleId, driverId, lat, lng, speed: spd, timestamp: ts },
         { upsert: true, new: true }
       );
-
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
 
       await RouteHistory.findOneAndUpdate(
         { vehicleId, isActive: true },

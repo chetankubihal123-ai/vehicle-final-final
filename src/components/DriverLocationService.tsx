@@ -179,6 +179,9 @@ export default function DriverLocationService() {
     setError("");
     await requestWakeLock();
 
+    // NOTIFICATION: Tell server we started
+    socket.emit("driver_start_tracking", { vehicleId });
+
     // Use watchPosition for real-time updates
     const id = navigator.geolocation.watchPosition(
       (pos) => {
