@@ -342,7 +342,8 @@ export default function Dashboard() {
                 {assignedVehicle.fuelType || assignedVehicle.fuel_type || "N/A"}
               </div>
               <div className="rounded-xl bg-black/20 px-3 py-2 text-xs">
-                <span className="font-semibold">Status:</span> Active
+                <span className="font-semibold">Status:</span>{" "}
+                <span className="capitalize">{assignedVehicle.status || "active"}</span>
               </div>
               {assignedVehicle.currentMileage && (
                 <div className="rounded-xl bg-black/20 px-3 py-2 text-xs">
@@ -468,7 +469,9 @@ export default function Dashboard() {
                         ? "bg-emerald-100 text-emerald-700"
                         : v.status === "maintenance"
                           ? "bg-amber-100 text-amber-700"
-                          : "bg-slate-100 text-slate-600"
+                          : v.status === "inactive"
+                            ? "bg-rose-100 text-rose-700"
+                            : "bg-slate-100 text-slate-600"
                         }`}
                     >
                       {v.status || "Unknown"}

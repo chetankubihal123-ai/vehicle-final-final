@@ -154,6 +154,7 @@ export function useVehicles() {
         year: vehicle.year,
         fuelType: vehicle.fuel_type,
         currentMileage: vehicle.current_mileage,
+        status: vehicle.status,
       });
 
       fetchData();
@@ -180,6 +181,7 @@ export function useVehicles() {
         year: updatedVehicle.year,
         fuelType: updatedVehicle.fuel_type,
         currentMileage: updatedVehicle.current_mileage,
+        status: updatedVehicle.status,
       });
 
       fetchData();
