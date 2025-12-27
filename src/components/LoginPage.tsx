@@ -304,10 +304,10 @@ export default function LoginPage() {
           initial={{ opacity: 0, x: -40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
-          className="bg-white/10 backdrop-blur-xl shadow-2xl rounded-3xl p-10 border border-white/20 hover:bg-white/20 transition-all"
+          className="bg-white/10 backdrop-blur-xl shadow-2xl rounded-3xl p-8 border border-white/20 hover:bg-white/20 transition-all lg:max-w-md"
         >
-          <div className="flex items-center space-x-4 mb-8">
-            <div className="bg-white/20 p-4 rounded-2xl shadow-lg backdrop-blur-lg">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="bg-white/20 p-3 rounded-2xl shadow-lg backdrop-blur-lg">
               <Car className="h-10 w-10 text-white" />
             </div>
             <h1 className="text-4xl font-extrabold text-white drop-shadow-md">
@@ -315,10 +315,10 @@ export default function LoginPage() {
             </h1>
           </div>
 
-          <h2 className="text-3xl font-semibold text-white mb-4">
+          <h2 className="text-2xl font-bold text-white mb-3">
             Smart Fleet & Vehicle Management
           </h2>
-          <p className="text-white/80 mb-8 text-lg">
+          <p className="text-white/80 mb-6 text-base">
             Manage vehicles with tracking, analytics, reminders, and more.
           </p>
 
@@ -334,17 +334,17 @@ export default function LoginPage() {
                 <div className="absolute inset-0 bg-yellow-400/20 blur-3xl rounded-full scale-75 animate-pulse"></div>
 
                 <motion.img
-                  src="/welcome_avatar.png"
+                  src="/welcome_truck.png"
                   alt="Welcome"
-                  className="w-72 h-72 mx-auto drop-shadow-[0_20px_30px_rgba(15,23,42,0.2)] relative z-10"
+                  className="w-full max-w-xs mx-auto drop-shadow-[0_20px_30px_rgba(15,23,42,0.3)] relative z-10"
                   style={{ mixBlendMode: 'multiply' }}
                   animate={{
-                    rotate: [0, 8, -8, 8, -8, 0],
-                    y: [0, -5, 0]
+                    y: [0, -10, 0],
                   }}
                   transition={{
-                    rotate: { duration: 2.5, repeat: Infinity, ease: "easeInOut" },
-                    y: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut"
                   }}
                 />
               </div>
