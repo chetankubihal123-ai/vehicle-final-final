@@ -101,18 +101,16 @@ export default function ExpenseManagement() {
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div
-              className={`p-2 rounded-lg ${
-                getCategoryColor(expense.category)
+              className={`p-2 rounded-lg ${getCategoryColor(expense.category)
                   .replace("text-", "bg-")
                   .replace("800", "100")
-              }`}
+                }`}
             >
               <DollarSign
-                className={`h-6 w-6 ${
-                  getCategoryColor(expense.category)
+                className={`h-6 w-6 ${getCategoryColor(expense.category)
                     .replace("bg-", "text-")
                     .replace("100", "600")
-                }`}
+                  }`}
               />
             </div>
 
@@ -270,22 +268,28 @@ export default function ExpenseManagement() {
               {/* Vehicle Select */}
               <div>
                 <label className="block text-sm font-medium mb-2">Vehicle</label>
-                <select
-                  required
-                  value={formData.vehicle_id}
-                  disabled={user?.role === "driver" && assignedVehicle}
-                  onChange={(e) =>
-                    setFormData({ ...formData, vehicle_id: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg"
-                >
-                  <option value="">Select vehicle</option>
-                  {vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.vehicle_number} – {v.make} {v.model}
-                    </option>
-                  ))}
-                </select>
+                {user?.role === "driver" && assignedVehicle ? (
+                  <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-semibold flex items-center justify-between">
+                    <span>{assignedVehicle.registrationNumber || assignedVehicle.vehicle_number}</span>
+                    <span className="text-xs text-purple-600 font-bold uppercase tracking-wider bg-purple-50 px-2 py-0.5 rounded">Assigned</span>
+                  </div>
+                ) : (
+                  <select
+                    required
+                    value={formData.vehicle_id}
+                    onChange={(e) =>
+                      setFormData({ ...formData, vehicle_id: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+                  >
+                    <option value="">Select vehicle</option>
+                    {vehicles.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.vehicle_number} – {v.make} {v.model}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* Category */}

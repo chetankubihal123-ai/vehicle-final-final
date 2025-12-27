@@ -10,8 +10,8 @@ import {
   Gauge,
   Calendar,
   TrendingUp,
-  Fuel,
   Wrench,
+  Receipt,
 } from "lucide-react";
 import {
   LineChart,
@@ -196,45 +196,6 @@ export default function Dashboard() {
     });
   }, [expenses]);
 
-  // Expense breakdown by category
-  const expenseBreakdown = useMemo(() => {
-    const buckets = [
-      {
-        name: "Fuel",
-        key: "fuel",
-        color: "#6366F1",
-      },
-      {
-        name: "Maintenance",
-        key: "maintenance",
-        color: "#10B981",
-      },
-      {
-        name: "Insurance",
-        key: "insurance",
-        color: "#F59E0B",
-      },
-      {
-        name: "Other",
-        key: "other",
-        color: "#EF4444",
-      },
-    ];
-
-    const data = buckets.map((b) => {
-      const value = expenses
-        .filter((e: AnyExpense) =>
-          b.key === "other"
-            ? !["fuel", "maintenance", "insurance"].includes(e.category)
-            : e.category === b.key
-        )
-        .reduce((s: number, e: AnyExpense) => s + (e.amount || 0), 0);
-      return { name: b.name, value, color: b.color };
-    });
-
-    return data.filter((d) => d.value > 0);
-  }, [expenses]);
-
   // Fleet health breakdown by status
   const fleetStatusBreakdown = useMemo(() => {
     const grouped: Record<string, number> = {};
@@ -287,6 +248,12 @@ export default function Dashboard() {
   const recentTrips = useMemo(
     () => trips.slice(0, 5),
     [trips]
+  );
+
+  // Recent 5 expenses
+  const recentExpensesList = useMemo(
+    () => [...expenses].sort((a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime()).slice(0, 5),
+    [expenses]
   );
 
   // ---------------- RENDER ----------------
@@ -599,52 +566,48 @@ export default function Dashboard() {
 
           {/* Expense breakdown + top vehicles + recent trips */}
           <div className="grid gap-6 md:grid-cols-3">
-            {/* Expense Breakdown */}
+            {/* Recent Expenses */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-slate-900">
-                  Expense Mix
+                  Recent Expenses
                 </h3>
-                <Fuel className="h-5 w-5 text-slate-400" />
+                <Receipt className="h-5 w-5 text-slate-400" />
               </div>
-              <div className="h-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={expenseBreakdown}
-                      dataKey="value"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={70}
-                      innerRadius={40}
-                      label
+              <div className="max-h-52 space-y-2 overflow-y-auto pr-1 text-xs">
+                {recentExpensesList.map((exp: AnyExpense) => {
+                  const vehicle = vehicles.find((v: AnyVehicle) => v.id === exp.vehicle_id);
+                  return (
+                    <div
+                      key={exp.id}
+                      className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
                     >
-                      {expenseBreakdown.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v: any) => `₹${v}`} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-2 space-y-1">
-                {expenseBreakdown.map((e, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between text-xs"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="h-2 w-2 rounded-full"
-                        style={{ background: e.color }}
-                      />
-                      <span className="text-slate-600">{e.name}</span>
+                      <div>
+                        <p className="font-semibold text-slate-900 capitalize">
+                          {exp.description || exp.category}
+                        </p>
+                        <p className="text-[11px] font-medium text-indigo-600">
+                          {vehicle?.vehicle_number || "Unknown"}
+                          <span className="mx-1.5 text-slate-300">•</span>
+                          {exp.logged_by_name}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[11px] font-black text-rose-600">
+                          ₹{exp.amount.toLocaleString()}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {format(new Date(exp.expense_date), "MMM dd")}
+                        </p>
+                      </div>
                     </div>
-                    <span className="font-medium text-slate-900">
-                      ₹{e.value.toLocaleString()}
-                    </span>
+                  );
+                })}
+                {recentExpensesList.length === 0 && (
+                  <div className="py-6 text-center text-slate-400">
+                    No expenses recorded yet.
                   </div>
-                ))}
+                )}
               </div>
             </div>
 

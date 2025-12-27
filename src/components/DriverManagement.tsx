@@ -47,6 +47,7 @@ interface Vehicle {
   registrationNumber: string;
   make: string;
   model: string;
+  currentDriver?: string; // Add this to track assignment
 }
 
 export default function DriverManagement() {
@@ -447,11 +448,18 @@ export default function DriverManagement() {
                           className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-indigo-500 transition-all outline-none font-medium appearance-none"
                         >
                           <option value="">No Vehicle Assigned</option>
-                          {vehicles.map((v) => (
-                            <option key={v._id} value={v._id}>
-                              {v.registrationNumber} - {v.make} {v.model}
-                            </option>
-                          ))}
+                          {vehicles
+                            .filter((v) => {
+                              const assignedId = typeof v.currentDriver === 'string'
+                                ? v.currentDriver
+                                : (v.currentDriver as any)?._id;
+                              return !assignedId || assignedId === editingDriver?._id;
+                            })
+                            .map((v) => (
+                              <option key={v._id} value={v._id}>
+                                {v.registrationNumber} - {v.make} {v.model}
+                              </option>
+                            ))}
                         </select>
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                       </div>
