@@ -98,11 +98,21 @@ export default function ExpenseManagement() {
 
     if (formData.receipt) fd.append("receipt", formData.receipt);
 
-    await axios.post("/expenses", fd, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    if (!formData.vehicle_id) {
+      alert("Please select a vehicle or wait for assignment to load.");
+      return;
+    }
 
-    window.location.reload();
+    try {
+      await axios.post("/expenses", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      alert("Expense added successfully!");
+      window.location.reload();
+    } catch (error) {
+      console.error("Error adding expense:", error);
+      alert("Failed to add expense. Please try again.");
+    }
   };
 
   // Expense Card

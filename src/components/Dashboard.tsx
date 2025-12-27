@@ -599,6 +599,14 @@ export default function Dashboard() {
                         <p className="text-[10px] text-slate-400">
                           {format(new Date(exp.expense_date), "MMM dd")}
                         </p>
+                        {exp.receipt_url && (
+                          <button
+                            onClick={() => window.open(exp.receipt_url, '_blank')}
+                            className="text-[10px] text-blue-600 hover:underline flex items-center justify-end gap-1 mt-0.5"
+                          >
+                            <Receipt size={10} /> View Bill
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
