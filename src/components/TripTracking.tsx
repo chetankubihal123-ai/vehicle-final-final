@@ -51,6 +51,18 @@ export default function TripTracking() {
   // Auto-fetch assigned vehicle for drivers
   useEffect(() => {
     if (user?.role === 'driver') {
+      // Try to find vehicle immediately from loaded vehicles
+      if (user.assignedVehicle) {
+        const found = vehicles.find(v => v.id === user.assignedVehicle);
+        if (found) {
+          setAssignedVehicle(found);
+          setSelectedVehicleForTracking(found.id);
+          setFormData(prev => ({ ...prev, vehicle_id: found.id }));
+          return;
+        }
+      }
+
+      // Fallback: fetch from API if not found (or if user.assignedVehicle is missing but DB has it)
       const fetchMyVehicle = async () => {
         try {
           const res = await axios.get('/drivers/me/vehicle');
@@ -63,9 +75,13 @@ export default function TripTracking() {
           console.error('Error fetching assigned vehicle:', err);
         }
       };
-      fetchMyVehicle();
+
+      // Only fetch if we couldn't find it locally
+      if (!assignedVehicle) {
+        fetchMyVehicle();
+      }
     }
-  }, [user]);
+  }, [user, vehicles.length]); // Add vehicles.length dependency to retry calculation when vehicles load
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

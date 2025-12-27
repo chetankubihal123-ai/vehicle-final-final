@@ -23,9 +23,22 @@ export default function ExpenseManagement() {
     receipt: null as File | null,
   });
 
-  // Load driver's assigned vehicle
+  // Auto-fetch assigned vehicle for drivers
   useEffect(() => {
     if (user?.role === "driver") {
+      // Try to find vehicle immediately from loaded vehicles
+      if (user.assignedVehicle) {
+        const found = vehicles.find((v) => v.id === user.assignedVehicle);
+        if (found) {
+          setAssignedVehicle(found);
+          setFormData((prev) => ({
+            ...prev,
+            vehicle_id: found.id,
+          }));
+          return;
+        }
+      }
+
       axios.get("/drivers/me/vehicle").then((res) => {
         if (res.data.vehicle) {
           setAssignedVehicle(res.data.vehicle);
@@ -36,7 +49,7 @@ export default function ExpenseManagement() {
         }
       });
     }
-  }, [user]);
+  }, [user, vehicles.length]);
 
   // Auto-select vehicle if only one exists
   useEffect(() => {
@@ -102,14 +115,14 @@ export default function ExpenseManagement() {
           <div className="flex items-center space-x-3">
             <div
               className={`p-2 rounded-lg ${getCategoryColor(expense.category)
-                  .replace("text-", "bg-")
-                  .replace("800", "100")
+                .replace("text-", "bg-")
+                .replace("800", "100")
                 }`}
             >
               <DollarSign
                 className={`h-6 w-6 ${getCategoryColor(expense.category)
-                    .replace("bg-", "text-")
-                    .replace("100", "600")
+                  .replace("bg-", "text-")
+                  .replace("100", "600")
                   }`}
               />
             </div>
