@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
+import { API_URL } from "../config";
 import {
   Car,
   MapPin,
