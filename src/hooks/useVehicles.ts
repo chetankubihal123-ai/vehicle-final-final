@@ -212,7 +212,11 @@ export function useVehicles() {
       await axios.post("/trips", {
         vehicleId: trip.vehicle_id,
         startLocation: trip.start_location,
+        startLocationLat: trip.start_location_lat,
+        startLocationLon: trip.start_location_lon,
         endLocation: trip.end_location,
+        endLocationLat: trip.end_location_lat,
+        endLocationLon: trip.end_location_lon,
         startMileage: trip.start_mileage,
         endMileage: trip.end_mileage,
         tripDate: trip.trip_date,
@@ -227,20 +231,45 @@ export function useVehicles() {
   };
 
   // -----------------------------
+  // EDIT TRIP (NEW)
+  // -----------------------------
+  const editTrip = async (id: string, tripData: any) => {
+    try {
+      await axios.put(`/trips/${id}`, tripData);
+      fetchData();
+    } catch (error) {
+      console.error("Error updating trip:", error);
+      throw error;
+    }
+  };
+
+  // -----------------------------
   // ADD EXPENSE
   // -----------------------------
-  const addExpense = async (expense: Omit<Expense, "id" | "created_at">) => {
+  const addExpense = async (expenseData: FormData | any) => {
     try {
-      await axios.post("/expenses", {
-        vehicleId: expense.vehicle_id,
-        type: expense.category,
-        amount: expense.amount,
-        description: expense.description,
-        date: expense.expense_date,
+      // Check if it's FormData (has file) or JSON
+      const isFormData = expenseData instanceof FormData;
+
+      await axios.post("/expenses", expenseData, {
+        headers: isFormData ? { "Content-Type": "multipart/form-data" } : {},
       });
       fetchData();
     } catch (error) {
       console.error("Error adding expense:", error);
+      throw error;
+    }
+  };
+
+  // -----------------------------
+  // DELETE EXPENSE (NEW)
+  // -----------------------------
+  const deleteExpense = async (id: string) => {
+    try {
+      await axios.delete(`/expenses/${id}`);
+      setExpenses((prev) => prev.filter((e) => e.id !== id));
+    } catch (error) {
+      console.error("Error deleting expense:", error);
       throw error;
     }
   };
@@ -255,7 +284,9 @@ export function useVehicles() {
     editVehicle,
     deleteVehicle, // <-- IMPORTANT EXPORT
     addTrip,
+    editTrip, // <-- NEW
     addExpense,
+    deleteExpense, // <-- NEW
     refreshData: fetchData,
   };
 }

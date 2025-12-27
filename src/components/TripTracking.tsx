@@ -11,7 +11,7 @@ import LocationAutocomplete from './LocationAutocomplete';
 
 export default function TripTracking() {
   const { user } = useAuth();
-  const { vehicles, trips, addTrip } = useVehicles();
+  const { vehicles, trips, addTrip, editTrip } = useVehicles();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTrackModal, setShowTrackModal] = useState(false);
   const [selectedVehicleForTracking, setSelectedVehicleForTracking] = useState<string>('');
@@ -125,7 +125,7 @@ export default function TripTracking() {
     if (!user || !editingTrip) return;
 
     try {
-      await axios.put(`/trips/${editingTrip.id}`, {
+      await editTrip(editingTrip.id, {
         vehicleId: formData.vehicle_id,
         startLocation: formData.start_location,
         startLocationLat: formData.start_location_lat,
@@ -140,8 +140,7 @@ export default function TripTracking() {
         purpose: formData.trip_purpose,
       });
 
-      // Refresh the page to show updated data
-      window.location.reload();
+      // No reload needed, hook updates state
     } catch (error) {
       console.error('Error updating trip:', error);
     }

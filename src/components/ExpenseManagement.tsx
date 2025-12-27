@@ -8,7 +8,7 @@ import axios from "axios";
 
 export default function ExpenseManagement() {
   const { user } = useAuth();
-  const { vehicles, expenses } = useVehicles();
+  const { vehicles, expenses, addExpense, deleteExpense } = useVehicles();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [filterCategory, setFilterCategory] = useState("all");
@@ -109,11 +109,18 @@ export default function ExpenseManagement() {
     }
 
     try {
-      await axios.post("/expenses", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await addExpense(fd);
       alert("Expense added successfully!");
-      window.location.reload();
+      setShowAddModal(false);
+      // Reset form
+      setFormData({
+        vehicle_id: formData.vehicle_id, // Keep vehicle ID
+        category: "fuel",
+        amount: "",
+        description: "",
+        expense_date: format(new Date(), "yyyy-MM-dd"),
+        receipt: null,
+      });
     } catch (error) {
       console.error("Error adding expense:", error);
       alert("Failed to add expense. Please try again.");
@@ -123,8 +130,7 @@ export default function ExpenseManagement() {
   const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this expense?")) return;
     try {
-      await axios.delete(`/expenses/${id}`);
-      window.location.reload();
+      await deleteExpense(id);
     } catch (err) {
       console.error("Error deleting expense:", err);
       alert("Failed to delete expense");
