@@ -13,7 +13,7 @@ export default function DriverLocationService() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [updateCount, setUpdateCount] = useState(0);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number; speed?: number } | null>(null);
 
   const gpsTimerRef = useRef<IntervalHandle>(null);
   const wakeLockRef = useRef<any>(null);
