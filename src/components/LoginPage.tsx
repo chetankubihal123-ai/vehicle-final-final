@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
   Car,
-  User,
-  Building,
-  Truck,
   Eye,
   EyeOff,
   Sun,
@@ -147,11 +144,6 @@ export default function LoginPage() {
     }
   };
 
-  const demoCredentials = [
-    { email: "owner@fleet.com", role: "Fleet Owner", icon: Building },
-    { email: "driver@fleet.com", role: "Driver", icon: Truck },
-    { email: "personal@user.com", role: "Personal User", icon: User },
-  ];
 
   const handleCardMouseMove = (
     e: React.MouseEvent<HTMLDivElement, MouseEvent>
@@ -330,38 +322,50 @@ export default function LoginPage() {
             Manage vehicles with tracking, analytics, reminders, and more.
           </p>
 
-          <div className="rounded-2xl bg-white/10 backdrop-blur-xl border border-white/30 p-6">
-            <h3 className="text-white text-lg font-semibold mb-4">
-              Try Demo Accounts
-            </h3>
+          <div className="relative flex flex-col items-center justify-center py-8">
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
+              className="text-center"
+            >
+              <div className="relative">
+                {/* Floating Glow */}
+                <div className="absolute inset-0 bg-yellow-400/20 blur-3xl rounded-full scale-75 animate-pulse"></div>
 
-            <div className="space-y-3">
-              {demoCredentials.map((cred, i) => {
-                const Icon = cred.icon;
-                return (
-                  <motion.button
-                    key={i}
-                    whileHover={{ scale: 1.03, x: 4 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => {
-                      setFormData({
-                        ...formData,
-                        email: cred.email,
-                        password: "demo",
-                      });
-                      setIsLogin(true);
-                    }}
-                    className="w-full flex items-center gap-4 p-4 rounded-xl bg-white/20 hover:bg-white/30 text-white border border-white/40"
-                  >
-                    <Icon className="h-6 w-6 text-yellow-200" />
-                    <div>
-                      <p className="font-semibold">{cred.role}</p>
-                      <p className="text-white/80 text-sm">{cred.email}</p>
-                    </div>
-                  </motion.button>
-                );
-              })}
-            </div>
+                <motion.img
+                  src="/welcome_avatar.png"
+                  alt="Welcome"
+                  className="w-72 h-72 mx-auto drop-shadow-[0_20px_30px_rgba(0,0,0,0.3)] relative z-10"
+                  animate={{
+                    y: [0, -15, 0],
+                    rotate: [0, 1.5, -1.5, 0]
+                  }}
+                  transition={{
+                    duration: 5,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8, duration: 0.5 }}
+                className="mt-6"
+              >
+                <div className="inline-block px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-yellow-300 font-bold text-lg mb-3">
+                  Hello! 👋 Welcome Back
+                </div>
+                <h3 className="text-3xl font-black text-white tracking-tight">
+                  Your Fleet is Ready
+                </h3>
+                <p className="text-white/70 mt-3 text-lg max-w-sm mx-auto">
+                  Sign in to monitor your vehicles and optimize your business operations in real-time.
+                </p>
+              </motion.div>
+            </motion.div>
           </div>
         </motion.div>
 
