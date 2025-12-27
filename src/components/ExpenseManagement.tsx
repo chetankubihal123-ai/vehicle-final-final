@@ -165,7 +165,10 @@ export default function ExpenseManagement() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <p className="text-lg font-bold text-gray-900">
+              ₹{expense.amount.toLocaleString()}
+            </p>
             <span
               className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider ${getCategoryColor(
                 expense.category
