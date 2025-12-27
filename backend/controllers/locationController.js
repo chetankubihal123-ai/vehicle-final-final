@@ -36,10 +36,10 @@ exports.updateLocation = async (req, res) => {
         await RouteHistory.findOneAndUpdate(
             {
                 vehicleId,
-                createdAt: { $gte: startOfDay }
+                isActive: true
             },
             {
-                $setOnInsert: { vehicleId, driverId },
+                $setOnInsert: { vehicleId, driverId, isActive: true },
                 $push: {
                     locations: { lat, lng, timestamp, speed: req.body.speed || 0 }
                 }
@@ -84,7 +84,7 @@ exports.getRouteHistory = async (req, res) => {
 
         const history = await RouteHistory.findOne({
             vehicleId,
-            createdAt: { $gte: startOfDay }
+            isActive: true
         }).populate('vehicleId', 'registrationNumber');
 
         if (!history || history.locations.length === 0) {

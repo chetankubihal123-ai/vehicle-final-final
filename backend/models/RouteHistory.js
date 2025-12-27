@@ -19,11 +19,16 @@ const routeHistorySchema = new mongoose.Schema({
             speed: { type: Number, default: 0 },
             timestamp: { type: Date, default: Date.now }
         }
-    ]
+    ],
+    isActive: {
+        type: Boolean,
+        default: true
+    }
 }, {
     timestamps: true // createdAt used for "today" filter
 });
 
+routeHistorySchema.index({ vehicleId: 1, isActive: 1 });
 routeHistorySchema.index({ vehicleId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('RouteHistory', routeHistorySchema);

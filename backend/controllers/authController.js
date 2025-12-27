@@ -157,6 +157,12 @@ exports.login = async (req, res) => {
         });
         if (vehicle) {
           assignedVehicleId = vehicle._id;
+          // Deactivate old tracking session for this vehicle
+          const RouteHistory = require("../models/RouteHistory");
+          await RouteHistory.updateMany(
+            { vehicleId: assignedVehicleId, isActive: true },
+            { isActive: false }
+          );
         }
       }
     }
@@ -241,6 +247,13 @@ exports.verifyLoginOTP = async (req, res) => {
         });
         if (vehicle) {
           assignedVehicleId = vehicle._id;
+
+          // Deactivate old tracking session for this vehicle
+          const RouteHistory = require("../models/RouteHistory");
+          await RouteHistory.updateMany(
+            { vehicleId: assignedVehicleId, isActive: true },
+            { isActive: false }
+          );
         }
       }
     }

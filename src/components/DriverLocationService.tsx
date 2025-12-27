@@ -96,6 +96,11 @@ export default function DriverLocationService() {
   // -------------------------------
   // 3. Optional wake-lock (screen on)
   // -------------------------------
+  const prevLocationRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  // -------------------------------
+  // 3. Optional wake-lock (screen on)
+  // -------------------------------
   const requestWakeLock = async () => {
     try {
       if ("wakeLock" in navigator && (navigator as any).wakeLock?.request) {
@@ -123,6 +128,22 @@ export default function DriverLocationService() {
     } catch {
       /* ignore */
     }
+  };
+
+  // Helper to calculate distance between two points in meters
+  const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // meters
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
   };
 
   // -------------------------------
@@ -161,6 +182,8 @@ export default function DriverLocationService() {
     // Use watchPosition for real-time updates
     const id = navigator.geolocation.watchPosition(
       (pos) => {
+        const { latitude, longitude, speed, accuracy } = pos.coords;
+
         // Check if socket is connected before sending
         if (!socket.connected) {
           console.warn("[DRIVER] Socket not connected, skipping location update");
@@ -169,7 +192,26 @@ export default function DriverLocationService() {
           return;
         }
 
-        const { latitude, longitude, speed, accuracy } = pos.coords;
+        // --- FILTERING FOR ACCURACY ---
+        // 1. Ignore low accuracy points (if accuracy > 50 meters, unless it's first point)
+        if (accuracy > 50 && prevLocationRef.current !== null) {
+          console.log("[DRIVER] High error margin, skipping:", accuracy);
+          return;
+        }
+
+        // 2. Filter by distance (only update if moved > 5 meters)
+        if (prevLocationRef.current) {
+          const dist = getDistance(
+            prevLocationRef.current.lat,
+            prevLocationRef.current.lng,
+            latitude,
+            longitude
+          );
+          if (dist < 5) {
+            console.log("[DRIVER] Minimal movement, skipping:", dist.toFixed(1), "m");
+            return;
+          }
+        }
 
         // Build full payload
         const location = {
@@ -188,7 +230,8 @@ export default function DriverLocationService() {
         console.log("[DRIVER] send_location =>", payload);
         socket.emit("send_location", payload);
 
-        // Update state for UI display
+        // Update state and refs
+        prevLocationRef.current = { lat: latitude, lng: longitude };
         setCurrentLocation({ lat: latitude, lng: longitude });
         setLastUpdate(new Date());
         setUpdateCount((prev) => prev + 1);
@@ -207,6 +250,20 @@ export default function DriverLocationService() {
 
     gpsTimerRef.current = id;
   };
+
+  // Auto-start tracking when dependencies are ready
+  useEffect(() => {
+    const checkAndStart = () => {
+      const driverId = localStorage.getItem("userId");
+      const vehicleId = localStorage.getItem("assignedVehicleId");
+      if (driverId && vehicleId && isSocketConnected && !isTracking) {
+        startTracking();
+      }
+    };
+
+    const timer = setTimeout(checkAndStart, 2000); // Give it a moment to stabilize
+    return () => clearTimeout(timer);
+  }, [isSocketConnected, isTracking]);
 
   // -------------------------------
   // 5. Stop tracking

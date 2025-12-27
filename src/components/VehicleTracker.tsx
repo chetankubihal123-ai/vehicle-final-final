@@ -140,16 +140,34 @@ export default function VehicleTracker({ vehicleId, vehicleName }: Props) {
       setTimeout(() => setJustReceivedUpdate(false), 2000);
     };
 
+    const handleReceiveRouteHistory = (points: { lat: number, lng: number, timestamp: any }[]) => {
+      console.log("[OWNER] receive_route_history (total pts):", points.length);
+      const history = points.map(p => [p.lat, p.lng] as [number, number]);
+      setLocationHistory(history);
+
+      if (points.length > 0) {
+        const last = points[points.length - 1];
+        setCurrentLocation({
+          lat: last.lat,
+          lng: last.lng,
+          speed: 0,
+          timestamp: new Date(last.timestamp)
+        });
+      }
+    };
+
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("connect_error", handleConnectError);
     socket.on("receive_location", handleReceiveLocation);
+    socket.on("receive_route_history", handleReceiveRouteHistory);
 
     return () => {
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleConnectError);
       socket.off("receive_location", handleReceiveLocation);
+      socket.off("receive_route_history", handleReceiveRouteHistory);
       socket.disconnect();
     };
   }, [vehicleId]);
@@ -219,7 +237,7 @@ export default function VehicleTracker({ vehicleId, vehicleName }: Props) {
               }));
 
             // Merge with existing state carefully
-            setLocationHistory(prev => {
+            setLocationHistory(() => {
               const formattedServerPts = serverPts.map((p: any) => [p.lat, p.lng] as [number, number]);
               return formattedServerPts;
             });

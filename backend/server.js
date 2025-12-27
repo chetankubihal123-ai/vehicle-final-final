@@ -133,7 +133,7 @@ io.on("connection", (socket) => {
 
       const history = await RouteHistory.findOne({
         vehicleId,
-        createdAt: { $gte: startOfDay },
+        isActive: true,
       });
 
       if (history) {
@@ -182,9 +182,9 @@ io.on("connection", (socket) => {
       startOfDay.setHours(0, 0, 0, 0);
 
       await RouteHistory.findOneAndUpdate(
-        { vehicleId, createdAt: { $gte: startOfDay } },
+        { vehicleId, isActive: true },
         {
-          $setOnInsert: { vehicleId, driverId },
+          $setOnInsert: { vehicleId, driverId, isActive: true },
           $push: { locations: { lat, lng, timestamp: ts, speed: spd } },
         },
         { upsert: true, new: true }

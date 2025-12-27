@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
 import { MapPin, Navigation, AlertCircle, CheckCircle } from 'lucide-react';
@@ -49,6 +49,24 @@ export const MobileLocationTracker = () => {
         }
     };
 
+    const prevLocationRef = useRef<{ lat: number; lng: number } | null>(null);
+
+    // Helper to calculate distance between two points in meters
+    const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371e3; // meters
+        const φ1 = (lat1 * Math.PI) / 180;
+        const φ2 = (lat2 * Math.PI) / 180;
+        const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+        const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+        const a =
+            Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
+    };
+
     useEffect(() => {
         if (!isTracking) return;
 
@@ -64,14 +82,39 @@ export const MobileLocationTracker = () => {
         // Request permission and start watching
         watchId = navigator.geolocation.watchPosition(
             (position) => {
+                const { latitude, longitude, accuracy, speed } = position.coords;
+
+                // --- FILTERING FOR ACCURACY ---
+                // 1. Ignore low accuracy points (if accuracy > 50 meters, unless it's first point)
+                if (accuracy > 50 && prevLocationRef.current !== null) {
+                    console.log("[MOBILE] High error margin, skipping:", accuracy);
+                    return;
+                }
+
+                // 2. Filter by distance (only update if moved > 5 meters)
+                if (prevLocationRef.current) {
+                    const dist = getDistance(
+                        prevLocationRef.current.lat,
+                        prevLocationRef.current.lng,
+                        latitude,
+                        longitude
+                    );
+                    if (dist < 5) {
+                        console.log("[MOBILE] Minimal movement, skipping:", dist.toFixed(1), "m");
+                        return;
+                    }
+                }
+
                 const locationData: LocationData = {
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
+                    latitude,
+                    longitude,
                     timestamp: new Date(),
-                    accuracy: position.coords.accuracy,
-                    speed: position.coords.speed || undefined
+                    accuracy,
+                    speed: speed || undefined
                 };
 
+                // Update state and refs
+                prevLocationRef.current = { lat: latitude, lng: longitude };
                 setLocation(locationData);
                 setError(''); // Clear any previous errors
 
@@ -136,8 +179,8 @@ export const MobileLocationTracker = () => {
                 {/* Status Card */}
                 <div className="bg-white shadow-lg p-6">
                     <div className={`flex items-center justify-center p-4 rounded-lg mb-4 ${isTracking
-                            ? 'bg-green-100 border-2 border-green-500'
-                            : 'bg-gray-100 border-2 border-gray-300'
+                        ? 'bg-green-100 border-2 border-green-500'
+                        : 'bg-gray-100 border-2 border-gray-300'
                         }`}>
                         <div className="text-center">
                             <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-2 ${isTracking ? 'bg-green-500' : 'bg-gray-400'
@@ -164,8 +207,8 @@ export const MobileLocationTracker = () => {
                     <button
                         onClick={toggleTracking}
                         className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 active:scale-95 shadow-lg ${isTracking
-                                ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
-                                : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                            ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                            : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
                             }`}
                     >
                         {isTracking ? '🛑 Stop Tracking' : '▶️ Start Tracking'}
