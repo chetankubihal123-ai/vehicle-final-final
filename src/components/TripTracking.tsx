@@ -58,7 +58,6 @@ export default function TripTracking() {
             setAssignedVehicle(res.data.vehicle);
             setSelectedVehicleForTracking(res.data.vehicle._id);
             setFormData(prev => ({ ...prev, vehicle_id: res.data.vehicle._id }));
-            // setShowTrackModal(true); // Don't auto-open tracking, let them choose
           }
         } catch (err) {
           console.error('Error fetching assigned vehicle:', err);
@@ -370,26 +369,26 @@ export default function TripTracking() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Vehicle
                   </label>
-                  <select
-                    required
-                    value={formData.vehicle_id}
-                    onChange={(e) => setFormData({ ...formData, vehicle_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    disabled={user?.role === 'driver' && assignedVehicle}
-                  >
-                    <option value="">Select a vehicle</option>
-                    {user?.role === 'driver' && assignedVehicle ? (
-                      <option value={assignedVehicle._id}>
-                        {assignedVehicle.registrationNumber} - {assignedVehicle.make} {assignedVehicle.model}
-                      </option>
-                    ) : (
-                      vehicles.map((vehicle) => (
+                  {user?.role === 'driver' && assignedVehicle ? (
+                    <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-semibold flex items-center justify-between">
+                      <span>{assignedVehicle.registrationNumber} - {assignedVehicle.make} {assignedVehicle.model}</span>
+                      <span className="text-xs text-purple-600 font-bold uppercase tracking-wider bg-purple-50 px-2 py-0.5 rounded">Assigned</span>
+                    </div>
+                  ) : (
+                    <select
+                      required
+                      value={formData.vehicle_id}
+                      onChange={(e) => setFormData({ ...formData, vehicle_id: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    >
+                      <option value="">Select a vehicle</option>
+                      {vehicles.map((vehicle) => (
                         <option key={vehicle.id} value={vehicle.id}>
                           {vehicle.vehicle_number} - {vehicle.make} {vehicle.model}
                         </option>
-                      ))
-                    )}
-                  </select>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div>
@@ -798,17 +797,15 @@ export default function TripTracking() {
                         <p className="font-semibold text-gray-900">Real-time Location</p>
                         <p className="text-sm text-gray-600 mt-1">Live GPS coordinates</p>
                       </div>
-
                       <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <Car className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                        <p className="font-semibold text-gray-900">Speed Monitoring</p>
-                        <p className="text-sm text-gray-600 mt-1">Current vehicle speed</p>
+                        <Navigation className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                        <p className="font-semibold text-gray-900">Trip Recording</p>
+                        <p className="text-sm text-gray-600 mt-1">Auto-calculate distance</p>
                       </div>
-
                       <div className="bg-white p-4 rounded-lg shadow-sm">
-                        <Navigation className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-                        <p className="font-semibold text-gray-900">Route History</p>
-                        <p className="text-sm text-gray-600 mt-1">Movement trail on map</p>
+                        <Car className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                        <p className="font-semibold text-gray-900">Live Dashboard</p>
+                        <p className="text-sm text-gray-600 mt-1">Visual map interface</p>
                       </div>
                     </div>
                   </div>
