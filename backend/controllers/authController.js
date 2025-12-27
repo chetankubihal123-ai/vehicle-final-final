@@ -147,6 +147,8 @@ exports.login = async (req, res) => {
     );
 
     let assignedVehicleId = null;
+    let vehicleData = null;
+
     if (user.role === "driver") {
       const Driver = require("../models/Driver");
       const Vehicle = require("../models/Vehicle");
@@ -157,6 +159,7 @@ exports.login = async (req, res) => {
         });
         if (vehicle) {
           assignedVehicleId = vehicle._id;
+          vehicleData = vehicle;
           // Deactivate old tracking session for this vehicle
           const RouteHistory = require("../models/RouteHistory");
           await RouteHistory.updateMany(
@@ -175,7 +178,7 @@ exports.login = async (req, res) => {
         email: user.email,
         role: user.role,
         assignedVehicleId,
-        assignedVehicle: assignedVehicleId ? vehicle : null,
+        assignedVehicle: vehicleData,
       },
     });
   } catch (error) {
@@ -238,6 +241,8 @@ exports.verifyLoginOTP = async (req, res) => {
     );
 
     let assignedVehicleId = null;
+    let vehicleData = null;
+
     if (user.role === "driver") {
       const Driver = require("../models/Driver");
       const Vehicle = require("../models/Vehicle");
@@ -248,6 +253,7 @@ exports.verifyLoginOTP = async (req, res) => {
         });
         if (vehicle) {
           assignedVehicleId = vehicle._id;
+          vehicleData = vehicle;
 
           // Deactivate old tracking session for this vehicle
           const RouteHistory = require("../models/RouteHistory");
@@ -267,7 +273,7 @@ exports.verifyLoginOTP = async (req, res) => {
         email: user.email,
         role: user.role,
         assignedVehicleId,
-        assignedVehicle: assignedVehicleId ? vehicle : null,
+        assignedVehicle: vehicleData,
       },
     });
   } catch (error) {
