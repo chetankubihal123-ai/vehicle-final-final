@@ -25,6 +25,7 @@ export default function VehicleManagement() {
     insurance_expiry: "",
     service_due_date: "",
     permit_expiry: "",
+    status: "active" as Vehicle["status"],
   };
 
   const [formData, setFormData] = useState(emptyForm);
@@ -77,7 +78,7 @@ export default function VehicleManagement() {
     await addVehicle({
       ...formData,
       vehicle_type: formData.vehicle_type.toLowerCase(),
-      fuel_type: formData.fuel_type.toLowerCase(),
+      fuel_type: formData.fuel_type,
       owner_id: user.id,
       status: "active",
     });
@@ -101,6 +102,7 @@ export default function VehicleManagement() {
       insurance_expiry: vehicle.insurance_expiry,
       service_due_date: vehicle.service_due_date,
       permit_expiry: vehicle.permit_expiry || "",
+      status: vehicle.status || "active",
     });
 
     setShowEditModal(true);
@@ -118,11 +120,12 @@ export default function VehicleManagement() {
       make: formData.make,
       model: formData.model,
       year: formData.year,
-      fuel_type: formData.fuel_type.toLowerCase(),
+      fuel_type: formData.fuel_type,
       current_mileage: formData.current_mileage,
       insurance_expiry: formData.insurance_expiry,
       service_due_date: formData.service_due_date,
       permit_expiry: formData.permit_expiry,
+      status: formData.status,
     });
 
     setShowEditModal(false);
@@ -268,25 +271,26 @@ function Modal({ title, onClose, onSubmit, formData, setFormData, availableModel
         <h2 className="text-xl font-semibold">{title}</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input label="Vehicle Number" value={formData.vehicle_number} onChange={(v) => setFormData({ ...formData, vehicle_number: v })} />
+          <Input label="Vehicle Number" value={formData.vehicle_number} onChange={(v: string) => setFormData({ ...formData, vehicle_number: v })} />
 
-          <VehicleAutocomplete label="Vehicle Type" value={formData.vehicle_type} onChange={(v) => setFormData({ ...formData, vehicle_type: v })} options={vehicleTypes} />
+          <VehicleAutocomplete label="Vehicle Type" value={formData.vehicle_type} onChange={(v: string) => setFormData({ ...formData, vehicle_type: v })} options={vehicleTypes} />
 
-          <VehicleAutocomplete label="Make" value={formData.make} onChange={(v) => setFormData({ ...formData, make: v, model: "" })} options={vehicleMakes} />
+          <VehicleAutocomplete label="Make" value={formData.make} onChange={(v: string) => setFormData({ ...formData, make: v, model: "" })} options={vehicleMakes} />
 
-          <VehicleAutocomplete label="Model" value={formData.model} onChange={(v) => setFormData({ ...formData, model: v })} options={availableModels} />
+          <VehicleAutocomplete label="Model" value={formData.model} onChange={(v: string) => setFormData({ ...formData, model: v })} options={availableModels} />
 
-          <NumberInput label="Year" value={formData.year} min={1990} max={new Date().getFullYear()} onChange={(v) => setFormData({ ...formData, year: v })} />
+          <NumberInput label="Year" value={formData.year} min={1990} max={new Date().getFullYear()} onChange={(v: number) => setFormData({ ...formData, year: v })} />
 
-          <Select label="Fuel Type" value={formData.fuel_type} onChange={(v) => setFormData({ ...formData, fuel_type: v })} options={["petrol", "diesel", "electric", "hybrid"]} />
+          <Select label="Fuel Type" value={formData.fuel_type} onChange={(v: any) => setFormData({ ...formData, fuel_type: v })} options={["petrol", "diesel", "electric", "hybrid"]} />
 
-          <NumberInput label="Mileage" value={formData.current_mileage} min={0} onChange={(v) => setFormData({ ...formData, current_mileage: v })} />
+          <NumberInput label="Mileage" value={formData.current_mileage} min={0} onChange={(v: number) => setFormData({ ...formData, current_mileage: v })} />
 
-          <Input label="Insurance Expiry" type="date" value={formData.insurance_expiry} onChange={(v) => setFormData({ ...formData, insurance_expiry: v })} />
+          <Input label="Insurance Expiry" type="date" value={formData.insurance_expiry} onChange={(v: string) => setFormData({ ...formData, insurance_expiry: v })} />
 
-          <Input label="Service Due" type="date" value={formData.service_due_date} onChange={(v) => setFormData({ ...formData, service_due_date: v })} />
+          <Input label="Service Due" type="date" value={formData.service_due_date} onChange={(v: string) => setFormData({ ...formData, service_due_date: v })} />
 
-          <Input label="Permit Expiry" type="date" value={formData.permit_expiry} onChange={(v) => setFormData({ ...formData, permit_expiry: v })} />
+          <Input label="Permit Expiry" type="date" value={formData.permit_expiry} onChange={(v: string) => setFormData({ ...formData, permit_expiry: v })} />
+          <Select label="Status" value={formData.status} onChange={(v: any) => setFormData({ ...formData, status: v })} options={["active", "inactive", "maintenance"]} />
         </div>
 
         <div className="flex justify-end space-x-2 pt-4">

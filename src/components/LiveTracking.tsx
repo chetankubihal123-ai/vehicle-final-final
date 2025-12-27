@@ -24,6 +24,7 @@ interface Vehicle {
     timestamp: string;
     speed?: number;
   };
+  status?: string;
 }
 
 export default function LiveTracking() {
@@ -129,7 +130,7 @@ export default function LiveTracking() {
     );
   }
 
-  const vehiclesWithDrivers = vehicles.filter((v) => v.currentDriver);
+  const vehiclesWithDrivers = vehicles.filter((v) => v.currentDriver && v.status !== "inactive");
   const activeVehicles = vehiclesWithDrivers.filter(isLocationRecent);
   const inactiveVehicles = vehiclesWithDrivers.filter(
     (v) => !isLocationRecent(v)

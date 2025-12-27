@@ -14,6 +14,7 @@ const vehicleSchema = new mongoose.Schema({
     permitExpiry: { type: Date },
     documents: [{ type: String }], // URLs to uploaded docs
     currentDriver: { type: mongoose.Schema.Types.ObjectId, ref: 'Driver' },
+    status: { type: String, enum: ['active', 'inactive', 'maintenance'], default: 'active' },
     currentLocation: {
         type: { type: String, default: 'Point' },
         coordinates: { type: [Number], default: [0, 0] }, // [longitude, latitude]
