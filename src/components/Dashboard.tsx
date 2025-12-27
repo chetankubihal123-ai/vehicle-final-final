@@ -131,7 +131,10 @@ export default function Dashboard() {
     if (user?.role === "driver") {
       const fetchMyVehicle = async () => {
         try {
-          const res = await axios.get("/drivers/me/vehicle");
+          const token = localStorage.getItem("token");
+          const res = await axios.get(`${API_URL}/api/drivers/my-vehicle`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
           if (res.data.vehicle) {
             setAssignedVehicle(res.data.vehicle);
           }
@@ -402,7 +405,39 @@ export default function Dashboard() {
             </div>
 
             <div className="max-h-[380px] space-y-3 overflow-y-auto pr-1">
-              {vehicles.map((v: AnyVehicle) => (
+              {isDriver && assignedVehicle ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="rounded-2xl border-2 border-indigo-100 bg-indigo-50/30 p-5 shadow-sm"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 flex-shrink-0 flex items-center justify-center bg-white rounded-2xl shadow-sm border border-indigo-50">
+                      <img
+                        src={vehicleImageFor(assignedVehicle)}
+                        alt=""
+                        className="h-12 w-12 object-contain"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-lg font-bold text-indigo-900 leading-tight">
+                        {assignedVehicle.make} {assignedVehicle.model}
+                      </h4>
+                      <p className="text-sm font-bold text-indigo-600 mt-0.5">
+                        {assignedVehicle.registrationNumber || assignedVehicle.vehicle_number}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <span className="inline-flex items-center rounded-lg bg-white px-2 py-1 text-[10px] font-bold text-indigo-700 border border-indigo-100 shadow-sm">
+                          {assignedVehicle.type || assignedVehicle.vehicle_type || "Car"}
+                        </span>
+                        <span className="inline-flex items-center rounded-lg bg-white px-2 py-1 text-[10px] font-bold text-emerald-700 border border-emerald-100 shadow-sm">
+                          {assignedVehicle.fuelType || assignedVehicle.fuel_type || "Petrol"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : vehicles.map((v: AnyVehicle) => (
                 <motion.div
                   key={v.id}
                   whileHover={{ scale: 1.01 }}
@@ -449,9 +484,16 @@ export default function Dashboard() {
                 </motion.div>
               ))}
 
-              {vehicles.length === 0 && (
+              {!isDriver && vehicles.length === 0 && (
                 <div className="py-10 text-center text-slate-400">
                   No vehicles added yet.
+                </div>
+              )}
+
+              {isDriver && !assignedVehicle && (
+                <div className="py-10 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  <Car className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                  <p className="text-xs font-medium">No vehicle assigned to you yet.</p>
                 </div>
               )}
             </div>

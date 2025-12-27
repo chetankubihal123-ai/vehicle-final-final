@@ -182,7 +182,7 @@ export default function DriverLocationService() {
     // Use watchPosition for real-time updates
     const id = navigator.geolocation.watchPosition(
       (pos) => {
-        const { latitude, longitude, speed, accuracy } = pos.coords;
+        let { latitude, longitude, speed, accuracy } = pos.coords;
 
         // Check if socket is connected before sending
         if (!socket.connected) {
@@ -192,14 +192,17 @@ export default function DriverLocationService() {
           return;
         }
 
-        // --- FILTERING FOR ACCURACY ---
-        // 1. Ignore low accuracy points (if accuracy > 50 meters, unless it's first point)
-        if (accuracy > 50 && prevLocationRef.current !== null) {
-          console.log("[DRIVER] High error margin, skipping:", accuracy);
+        // --- FILTERING FOR ACCURACY & JITTER ---
+        // 1. Ignore low accuracy points (if accuracy > 30 meters)
+        if (accuracy > 30 && prevLocationRef.current !== null) {
+          console.log("[DRIVER] Poor accuracy, skipping:", accuracy);
           return;
         }
 
-        // 2. Filter by distance (only update if moved > 5 meters)
+        let sentSpeed = speed ?? 0;
+        if (sentSpeed < 0.5) sentSpeed = 0; // Force 0 for very low speeds
+
+        // 2. Filter by distance
         if (prevLocationRef.current) {
           const dist = getDistance(
             prevLocationRef.current.lat,
@@ -207,9 +210,21 @@ export default function DriverLocationService() {
             latitude,
             longitude
           );
+
+          // Threshold 1: If moved < 2 meters, don't move the map point at all
+          if (dist < 2) {
+            latitude = prevLocationRef.current.lat;
+            longitude = prevLocationRef.current.lng;
+            sentSpeed = 0;
+          }
+
+          // Threshold 2: If moved < 5 meters, assume stationary
           if (dist < 5) {
-            console.log("[DRIVER] Minimal movement, skipping:", dist.toFixed(1), "m");
-            return;
+            sentSpeed = 0;
+            // If already signaled as stationary, don't spam the server
+            if (currentLocation?.speed === 0 && dist < 1) {
+              return;
+            }
           }
         }
 
@@ -217,7 +232,7 @@ export default function DriverLocationService() {
         const location = {
           lat: latitude,
           lng: longitude,
-          speed: speed ?? 0,
+          speed: sentSpeed,
           accuracy: accuracy ?? null,
           timestamp: new Date().toISOString(),
         };
@@ -232,7 +247,7 @@ export default function DriverLocationService() {
 
         // Update state and refs
         prevLocationRef.current = { lat: latitude, lng: longitude };
-        setCurrentLocation({ lat: latitude, lng: longitude });
+        setCurrentLocation({ lat: latitude, lng: longitude, speed: sentSpeed });
         setLastUpdate(new Date());
         setUpdateCount((prev) => prev + 1);
         setError(""); // Clear any previous errors
