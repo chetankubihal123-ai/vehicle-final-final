@@ -62,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: rawUser.role,
       name: rawUser.name,
       assignedVehicle: rawUser.assignedVehicleId || null,
+      assignedVehicleDetails: rawUser.assignedVehicle || null,
       profilePic: rawUser.profilePic,
       phone: rawUser.phone,
       dob: rawUser.dob,

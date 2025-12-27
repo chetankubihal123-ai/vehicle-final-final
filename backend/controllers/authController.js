@@ -175,6 +175,7 @@ exports.login = async (req, res) => {
         email: user.email,
         role: user.role,
         assignedVehicleId,
+        assignedVehicle: assignedVehicleId ? vehicle : null,
       },
     });
   } catch (error) {
@@ -266,6 +267,7 @@ exports.verifyLoginOTP = async (req, res) => {
         email: user.email,
         role: user.role,
         assignedVehicleId,
+        assignedVehicle: assignedVehicleId ? vehicle : null,
       },
     });
   } catch (error) {

@@ -6,6 +6,12 @@ export interface User {
   created_at?: string;
   fleet_owner_id?: string;
   assignedVehicle?: string | null;
+  assignedVehicleDetails?: {
+    _id: string;
+    registrationNumber: string;
+    make: string;
+    model: string;
+  } | null;
   profilePic?: string;
   phone?: string;
   dob?: string;

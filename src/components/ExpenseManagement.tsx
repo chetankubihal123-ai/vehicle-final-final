@@ -282,9 +282,11 @@ export default function ExpenseManagement() {
               <div>
                 <label className="block text-sm font-medium mb-2">Vehicle</label>
                 {user?.role === "driver" ? (
-                  assignedVehicle ? (
+                  (assignedVehicle || user.assignedVehicleDetails) ? (
                     <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-semibold flex items-center justify-between">
-                      <span>{assignedVehicle.registrationNumber || assignedVehicle.vehicle_number}</span>
+                      <span>
+                        {user.assignedVehicleDetails?.registrationNumber || assignedVehicle?.registrationNumber} - {user.assignedVehicleDetails?.make || assignedVehicle?.make} {user.assignedVehicleDetails?.model || assignedVehicle?.model}
+                      </span>
                       <span className="text-xs text-purple-600 font-bold uppercase tracking-wider bg-purple-50 px-2 py-0.5 rounded">Assigned</span>
                     </div>
                   ) : (
