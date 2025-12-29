@@ -66,7 +66,7 @@ export default function VehicleTracker({ vehicleId, vehicleName, onSaveTrip }: P
   const [justReceivedUpdate, setJustReceivedUpdate] = useState(false);
 
   const socketRef = useRef<typeof socket | null>(null);
-  const STALE_MS = 30_000; // 30 seconds
+  const STALE_MS = 10_000; // 10 seconds - more strict for better offline detection
 
   // --------------------------------
   // 1. SOCKET: live updates
@@ -183,7 +183,7 @@ export default function VehicleTracker({ vehicleId, vehicleName, onSaveTrip }: P
         const diff = Date.now() - currentLocation.timestamp.getTime();
         setIsGPSStale(diff > STALE_MS);
       }
-    }, 5000); // Check every 5 seconds
+    }, 2000); // Check every 2 seconds for more responsive status updates
 
     return () => clearInterval(interval);
   }, [currentLocation.timestamp, STALE_MS]);
