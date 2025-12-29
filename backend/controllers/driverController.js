@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Driver = require("../models/Driver");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
+const { sendOTP } = require("../services/emailService");
 
 // Helper: normalize any incoming vehicle value to either a valid ObjectId string or null
 const normalizeVehicle = (value) => {
@@ -32,6 +33,9 @@ const normalizeVehicle = (value) => {
   return null;
 };
 
+const generateOTP = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
+
 // ---------------------- ADD DRIVER ----------------------
 exports.addDriver = async (req, res) => {
   try {
@@ -54,19 +58,36 @@ exports.addDriver = async (req, res) => {
         .json({ message: "User with this email already exists" });
     }
 
-    // 2. Create User with role=driver
+    // 2. Validate Email Implementation (Send OTP)
+    // We send the OTP *before* saving to ensure the email is valid/deliverable.
+    const otp = generateOTP();
+    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 mins
+
+    console.log(`[ADD_DRIVER] verifying email ${email} with OTP...`);
+    const emailSent = await sendOTP(email, otp, name);
+
+    if (!emailSent) {
+      console.error("[ADD_DRIVER] Failed to send verification email (Fake/Invalid Email Protection)");
+      return res.status(400).json({
+        message: "Failed to verify email address. Please provide a valid email that can receive messages."
+      });
+    }
+
+    // 3. Create User with role=driver
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({
       name,
       email,
       password: hashedPassword,
       role: "driver",
-      isVerified: true, // drivers added by owner/admin are auto-verified
+      isVerified: false, // Enforce verification!
+      otp,
+      otpExpires,
       profilePic: profilePic || "",
     });
     await user.save();
 
-    // 3. Create Driver profile
+    // 4. Create Driver profile
     const vehicleId = normalizeVehicle(assignedVehicle);
 
     const driver = new Driver({
@@ -78,7 +99,7 @@ exports.addDriver = async (req, res) => {
 
     await driver.save();
 
-    // 4. If a valid vehicle is selected, set currentDriver on that vehicle
+    // 5. If a valid vehicle is selected, set currentDriver on that vehicle
     if (vehicleId) {
       const Vehicle = require("../models/Vehicle");
       await Vehicle.findByIdAndUpdate(vehicleId, {
@@ -88,7 +109,10 @@ exports.addDriver = async (req, res) => {
 
     console.log("[ADD_DRIVER] success for:", email);
 
-    res.status(201).json({ message: "Driver added successfully", driver });
+    res.status(201).json({
+      message: "Driver added successfully. Verification email sent.",
+      driver
+    });
   } catch (error) {
     console.error("[ADD_DRIVER] Error:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
