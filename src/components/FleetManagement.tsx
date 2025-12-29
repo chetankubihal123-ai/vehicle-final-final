@@ -86,9 +86,45 @@ export default function FleetManagement() {
         return daysSinceService > 90;
     });
 
-    // Expense by Vehicle
+    // Filter expenses by time range
+    const getFilteredExpenses = () => {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        return expenses.filter(expense => {
+            if (!expense.expense_date) return false;
+            const expenseDate = parseISO(expense.expense_date);
+
+            switch (selectedTimeRange) {
+                case 'week':
+                    // Last 7 days
+                    const weekAgo = new Date(startOfToday);
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    return expenseDate >= weekAgo && expenseDate <= now;
+
+                case 'month':
+                    // Last 30 days
+                    const monthAgo = new Date(startOfToday);
+                    monthAgo.setDate(monthAgo.getDate() - 30);
+                    return expenseDate >= monthAgo && expenseDate <= now;
+
+                case 'year':
+                    // Last 365 days
+                    const yearAgo = new Date(startOfToday);
+                    yearAgo.setDate(yearAgo.getDate() - 365);
+                    return expenseDate >= yearAgo && expenseDate <= now;
+
+                default:
+                    return true;
+            }
+        });
+    };
+
+    const filteredExpenses = getFilteredExpenses();
+
+    // Expense by Vehicle (using filtered expenses)
     const expenseByVehicle = vehicles.map(v => {
-        const vehicleExpenses = expenses
+        const vehicleExpenses = filteredExpenses
             .filter(e => e.vehicle_id === v.id)
             .reduce((sum, e) => sum + (e.amount || 0), 0);
         return {
@@ -97,8 +133,8 @@ export default function FleetManagement() {
         };
     }).sort((a, b) => b.amount - a.amount).slice(0, 10);
 
-    // Total Fleet Expenses
-    const totalFleetExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    // Total Fleet Expenses (using filtered expenses)
+    const totalFleetExpenses = filteredExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
     const avgExpensePerVehicle = vehicles.length > 0 ? totalFleetExpenses / vehicles.length : 0;
 
     // Fuel Efficiency
