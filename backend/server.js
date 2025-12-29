@@ -161,13 +161,26 @@ io.on("connection", (socket) => {
 
   socket.on("driver_start_tracking", async (data) => {
     try {
+      console.log("[SOCKET] driver_start_tracking received:", data);
       const { vehicleId } = data;
-      if (!vehicleId) return;
+      if (!vehicleId) {
+        console.log("[SOCKET] No vehicleId in data");
+        return;
+      }
 
       // Find vehicle to get owner
       const vehicle = await Vehicle.findById(vehicleId);
-      if (vehicle && vehicle.ownerId) {
-        const ownerRoom = `owner_${vehicle.ownerId}`;
+      if (!vehicle) {
+        console.log("[SOCKET] Vehicle not found:", vehicleId);
+        return;
+      }
+
+      console.log("[SOCKET] Vehicle found. OwnerID:", vehicle.ownerId);
+
+      if (vehicle.ownerId) {
+        const ownerRoom = `owner_${vehicle.ownerId.toString()}`;
+        console.log("[SOCKET] Emitting to room:", ownerRoom);
+
         io.to(ownerRoom).emit("alert_tracking_started", {
           vehicleId,
           vehicleNumber: vehicle.registrationNumber,
@@ -175,6 +188,8 @@ io.on("connection", (socket) => {
           timestamp: new Date()
         });
         console.log(`[SOCKET] Alert sent to ${ownerRoom} for vehicle ${vehicle.registrationNumber}`);
+      } else {
+        console.log("[SOCKET] Vehicle has no ownerId");
       }
     } catch (error) {
       console.error("driver_start_tracking error:", error);

@@ -8,6 +8,7 @@ import {
   Polyline,
   Tooltip,
   useMap,
+  LayersControl,
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -339,7 +340,20 @@ export default function VehicleTracker({ vehicleId, vehicleName, onSaveTrip }: P
             scrollWheelZoom
             style={{ height: "100%", width: "100%" }}
           >
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <LayersControl position="topright">
+              <LayersControl.BaseLayer checked name="Satellite">
+                <TileLayer
+                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                  attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                />
+              </LayersControl.BaseLayer>
+              <LayersControl.BaseLayer name="Street">
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+              </LayersControl.BaseLayer>
+            </LayersControl>
 
             <MapController
               center={[currentLocation.lat, currentLocation.lng]}
