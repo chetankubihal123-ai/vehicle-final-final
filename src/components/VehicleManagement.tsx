@@ -294,7 +294,7 @@ function Modal({ title, onClose, onSubmit, formData, setFormData, availableModel
 
           <Select label="Fuel Type" value={formData.fuel_type} onChange={(v: any) => setFormData({ ...formData, fuel_type: v })} options={["petrol", "diesel", "electric", "hybrid"]} />
 
-          <NumberInput label="Mileage" value={formData.current_mileage} min={0} onChange={(v: number) => setFormData({ ...formData, current_mileage: v })} />
+          <NumberInput label="Odometer Reading (km)" value={formData.current_mileage} min={0} onChange={(v: number) => setFormData({ ...formData, current_mileage: v })} />
 
           <Input
             label="Insurance Expiry"
