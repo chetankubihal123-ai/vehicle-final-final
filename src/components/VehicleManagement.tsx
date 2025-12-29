@@ -279,17 +279,46 @@ function Modal({ title, onClose, onSubmit, formData, setFormData, availableModel
 
           <VehicleAutocomplete label="Model" value={formData.model} onChange={(v: string) => setFormData({ ...formData, model: v })} options={availableModels} />
 
-          <NumberInput label="Year" value={formData.year} min={1990} max={new Date().getFullYear()} onChange={(v: number) => setFormData({ ...formData, year: v })} />
+          <NumberInput
+            label="Year"
+            value={formData.year}
+            min={1990}
+            max={2025}
+            onChange={(v: number) => {
+              // Strict restriction: only allow 1990-2025
+              if (v > 2025) return;
+              if (v < 0) return; // Prevent negative typing
+              setFormData({ ...formData, year: v });
+            }}
+          />
 
           <Select label="Fuel Type" value={formData.fuel_type} onChange={(v: any) => setFormData({ ...formData, fuel_type: v })} options={["petrol", "diesel", "electric", "hybrid"]} />
 
           <NumberInput label="Mileage" value={formData.current_mileage} min={0} onChange={(v: number) => setFormData({ ...formData, current_mileage: v })} />
 
-          <Input label="Insurance Expiry" type="date" value={formData.insurance_expiry} onChange={(v: string) => setFormData({ ...formData, insurance_expiry: v })} />
+          <Input
+            label="Insurance Expiry"
+            type="date"
+            value={formData.insurance_expiry}
+            max="2100-12-31"
+            onChange={(v: string) => setFormData({ ...formData, insurance_expiry: v })}
+          />
 
-          <Input label="Service Due" type="date" value={formData.service_due_date} onChange={(v: string) => setFormData({ ...formData, service_due_date: v })} />
+          <Input
+            label="Service Due"
+            type="date"
+            value={formData.service_due_date}
+            max="2100-12-31"
+            onChange={(v: string) => setFormData({ ...formData, service_due_date: v })}
+          />
 
-          <Input label="Permit Expiry" type="date" value={formData.permit_expiry} onChange={(v: string) => setFormData({ ...formData, permit_expiry: v })} />
+          <Input
+            label="Permit Expiry"
+            type="date"
+            value={formData.permit_expiry}
+            max="2100-12-31"
+            onChange={(v: string) => setFormData({ ...formData, permit_expiry: v })}
+          />
           <Select label="Status" value={formData.status} onChange={(v: any) => setFormData({ ...formData, status: v })} options={["active", "inactive", "maintenance"]} />
         </div>
 
@@ -309,13 +338,15 @@ function Modal({ title, onClose, onSubmit, formData, setFormData, availableModel
 /* ---------------------------------------------
    INPUT COMPONENTS
 --------------------------------------------- */
-function Input({ label, value, onChange, type = "text" }: any) {
+function Input({ label, value, onChange, type = "text", min, max }: any) {
   return (
     <div>
       <label className="block text-sm mb-1">{label}</label>
       <input
         type={type}
         value={value}
+        min={min}
+        max={max}
         onChange={(e) => onChange(e.target.value)}
         className="w-full px-3 py-2 border rounded"
       />
