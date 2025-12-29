@@ -30,6 +30,7 @@ import {
 export default function FleetManagement() {
     const { vehicles, trips, expenses, drivers } = useVehicles();
     const [selectedTimeRange, setSelectedTimeRange] = useState<'week' | 'month' | 'year'>('month');
+    const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth()); // 0-11
 
     // Fleet Statistics
     const totalVehicles = vehicles.length;
@@ -103,10 +104,11 @@ export default function FleetManagement() {
                     return expenseDate >= weekAgo && expenseDate <= now;
 
                 case 'month':
-                    // Last 30 days
-                    const monthAgo = new Date(startOfToday);
-                    monthAgo.setDate(monthAgo.getDate() - 30);
-                    return expenseDate >= monthAgo && expenseDate <= now;
+                    // Specific month selected
+                    const expenseMonth = expenseDate.getMonth();
+                    const expenseYear = expenseDate.getFullYear();
+                    const currentYear = now.getFullYear();
+                    return expenseMonth === selectedMonth && expenseYear === currentYear;
 
                 case 'year':
                     // Last 365 days
@@ -200,7 +202,7 @@ export default function FleetManagement() {
                         Monitor and optimize your entire fleet performance
                     </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                     {(['week', 'month', 'year'] as const).map((range) => (
                         <button
                             key={range}
@@ -213,6 +215,20 @@ export default function FleetManagement() {
                             {range.charAt(0).toUpperCase() + range.slice(1)}
                         </button>
                     ))}
+                    {selectedTimeRange === 'month' && (
+                        <select
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                            className="px-4 py-2 rounded-lg border border-gray-300 bg-white font-medium text-gray-700 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            {[
+                                'January', 'February', 'March', 'April', 'May', 'June',
+                                'July', 'August', 'September', 'October', 'November', 'December'
+                            ].map((month, index) => (
+                                <option key={index} value={index}>{month}</option>
+                            ))}
+                        </select>
+                    )}
                 </div>
             </div>
 
