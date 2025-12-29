@@ -457,7 +457,7 @@ export default function TripTracking() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Start Mileage (km)
+                    Odometer Start Reading (km)
                   </label>
                   <input
                     type="number"
@@ -471,7 +471,7 @@ export default function TripTracking() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    End Mileage (km)
+                    Odometer End Reading (km)
                   </label>
                   <input
                     type="number"
