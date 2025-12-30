@@ -270,18 +270,7 @@ export default function DriverLocationService() {
   };
 
   // Auto-start tracking when dependencies are ready
-  useEffect(() => {
-    const checkAndStart = () => {
-      const driverId = localStorage.getItem("userId");
-      const vehicleId = localStorage.getItem("assignedVehicleId");
-      if (driverId && vehicleId && isSocketConnected && !isTracking) {
-        startTracking();
-      }
-    };
 
-    const timer = setTimeout(checkAndStart, 2000); // Give it a moment to stabilize
-    return () => clearTimeout(timer);
-  }, [isSocketConnected, isTracking]);
 
   // -------------------------------
   // 5. Stop tracking
