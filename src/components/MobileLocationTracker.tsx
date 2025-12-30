@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { API_URL } from '../config';
 import { MapPin, Navigation, AlertCircle, CheckCircle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LocationData {
     latitude: number;
@@ -168,7 +169,23 @@ export const MobileLocationTracker = () => {
         };
     }, [isTracking]);
 
+    const { user } = useAuth(); // Import useAuth
+    const [isInactive, setIsInactive] = useState(false);
+
+    useEffect(() => {
+        if (user?.driverStatus === 'Inactive') {
+            setIsInactive(true);
+            if (isTracking) {
+                toggleTracking(); // Stop if currently tracking
+            }
+        } else {
+            setIsInactive(false);
+        }
+    }, [user?.driverStatus]);
+
     const toggleTracking = () => {
+        if (isInactive) return; // Prevent enabling
+
         if (!isTracking) {
             // Reset error when starting
             setError('');
@@ -193,26 +210,35 @@ export const MobileLocationTracker = () => {
 
                 {/* Status Card */}
                 <div className="bg-white shadow-lg p-6">
-                    <div className={`flex items-center justify-center p-4 rounded-lg mb-4 ${isTracking
-                        ? 'bg-green-100 border-2 border-green-500'
-                        : 'bg-gray-100 border-2 border-gray-300'
+                    <div className={`flex items-center justify-center p-4 rounded-lg mb-4 ${isInactive
+                        ? 'bg-red-100 border-2 border-red-500'
+                        : isTracking
+                            ? 'bg-green-100 border-2 border-green-500'
+                            : 'bg-gray-100 border-2 border-gray-300'
                         }`}>
                         <div className="text-center">
-                            <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-2 ${isTracking ? 'bg-green-500' : 'bg-gray-400'
+                            <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-2 ${isInactive ? 'bg-red-500' : isTracking ? 'bg-green-500' : 'bg-gray-400'
                                 }`}>
-                                {isTracking ? (
+                                {isInactive ? (
+                                    <AlertCircle className="w-8 h-8 text-white" />
+                                ) : isTracking ? (
                                     <CheckCircle className="w-8 h-8 text-white" />
                                 ) : (
                                     <MapPin className="w-8 h-8 text-white" />
                                 )}
                             </div>
-                            <h2 className={`text-xl font-bold ${isTracking ? 'text-green-700' : 'text-gray-700'
+                            <h2 className={`text-xl font-bold ${isInactive ? 'text-red-700' : isTracking ? 'text-green-700' : 'text-gray-700'
                                 }`}>
-                                {isTracking ? 'Tracking Active' : 'Tracking Inactive'}
+                                {isInactive ? 'Account Inactive' : isTracking ? 'Tracking Active' : 'Tracking Inactive'}
                             </h2>
                             {isTracking && (
                                 <p className="text-sm text-green-600 mt-1">
                                     Updates sent: {updateCount}
+                                </p>
+                            )}
+                            {isInactive && (
+                                <p className="text-sm text-red-600 mt-1 font-bold">
+                                    Contact Admin to Enable
                                 </p>
                             )}
                         </div>
@@ -221,12 +247,15 @@ export const MobileLocationTracker = () => {
                     {/* Control Button */}
                     <button
                         onClick={toggleTracking}
-                        className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 active:scale-95 shadow-lg ${isTracking
-                            ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
-                            : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                        disabled={isInactive}
+                        className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 active:scale-95 shadow-lg ${isInactive
+                            ? 'bg-gray-400 cursor-not-allowed opacity-50 text-white'
+                            : isTracking
+                                ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                                : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
                             }`}
                     >
-                        {isTracking ? '🛑 Stop Tracking' : '▶️ Start Tracking'}
+                        {isInactive ? 'Your account is inactive. fast contact admin.' : isTracking ? '🛑 Stop Tracking' : '▶️ Start Tracking'}
                     </button>
                 </div>
 

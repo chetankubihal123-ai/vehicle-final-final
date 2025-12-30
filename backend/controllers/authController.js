@@ -148,12 +148,14 @@ exports.login = async (req, res) => {
 
     let assignedVehicleId = null;
     let vehicleData = null;
+    let driverStatus = null;
 
     if (user.role === "driver") {
       const Driver = require("../models/Driver");
       const Vehicle = require("../models/Vehicle");
       const driverProfile = await Driver.findOne({ userId: user._id });
       if (driverProfile) {
+        driverStatus = driverProfile.status;
         const vehicle = await Vehicle.findOne({
           currentDriver: driverProfile._id,
         });
@@ -179,6 +181,7 @@ exports.login = async (req, res) => {
         role: user.role,
         assignedVehicleId,
         assignedVehicle: vehicleData,
+        driverStatus,
       },
     });
   } catch (error) {
@@ -242,12 +245,14 @@ exports.verifyLoginOTP = async (req, res) => {
 
     let assignedVehicleId = null;
     let vehicleData = null;
+    let driverStatus = null;
 
     if (user.role === "driver") {
       const Driver = require("../models/Driver");
       const Vehicle = require("../models/Vehicle");
       const driverProfile = await Driver.findOne({ userId: user._id });
       if (driverProfile) {
+        driverStatus = driverProfile.status;
         const vehicle = await Vehicle.findOne({
           currentDriver: driverProfile._id,
         });
@@ -274,6 +279,7 @@ exports.verifyLoginOTP = async (req, res) => {
         role: user.role,
         assignedVehicleId,
         assignedVehicle: vehicleData,
+        driverStatus,
       },
     });
   } catch (error) {
@@ -293,6 +299,8 @@ exports.getMe = async (req, res) => {
     }
 
     let assignedVehicleId = null;
+    let driverStatus = null;
+
     if (user.role === "driver") {
       const Driver = require("../models/Driver");
       const Vehicle = require("../models/Vehicle");
@@ -301,6 +309,7 @@ exports.getMe = async (req, res) => {
 
       if (driverProfile) {
         console.log("🔍 Found driver profile:", driverProfile._id);
+        driverStatus = driverProfile.status;
         const vehicle = await Vehicle.findOne({
           currentDriver: driverProfile._id,
         });
@@ -329,6 +338,7 @@ exports.getMe = async (req, res) => {
       address: user.address,
       gender: user.gender,
       assignedVehicleId,
+      driverStatus,
     });
   } catch (error) {
     console.error("Get Me error:", error);

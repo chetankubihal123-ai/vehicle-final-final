@@ -68,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       dob: rawUser.dob,
       address: rawUser.address,
       gender: rawUser.gender,
+      driverStatus: rawUser.driverStatus,
     };
 
     localStorage.setItem("token", token);
