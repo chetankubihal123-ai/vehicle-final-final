@@ -1,6 +1,6 @@
 // src/components/DriverLocationService.tsx
 import { useEffect, useState, useRef } from "react";
-import { MapPin, X, Navigation } from "lucide-react";
+import { MapPin, X, Navigation, AlertCircle } from "lucide-react";
 import axios from "axios";
 import { API_URL } from "../config";
 import { socket } from "../socket";
@@ -17,6 +17,8 @@ export default function DriverLocationService() {
 
   const gpsTimerRef = useRef<IntervalHandle>(null);
   const wakeLockRef = useRef<any>(null);
+
+  const [isInactive, setIsInactive] = useState(false);
 
   // -------------------------------
   // 1. Fetch driver profile + vehicle
@@ -36,6 +38,14 @@ export default function DriverLocationService() {
 
         console.log("[DRIVER] loaded /auth/me:", res.data);
 
+        if (res.data.driverStatus === 'Inactive') {
+          setIsInactive(true);
+          // If we were somehow tracking, stop it (though usually this components mounts fresh)
+          if (isTracking) stopTracking();
+        } else {
+          setIsInactive(false);
+        }
+
         // Save driver id and assigned vehicle for later use
         localStorage.setItem("userId", res.data.id);
         if (res.data.assignedVehicleId) {
@@ -49,6 +59,9 @@ export default function DriverLocationService() {
       }
     })();
   }, []);
+
+  // ... (rest of the socket code) ...
+
 
   // -------------------------------
   // 2. Base socket connection
@@ -150,6 +163,8 @@ export default function DriverLocationService() {
   // 4. Start tracking
   // -------------------------------
   const startTracking = async () => {
+    if (isInactive) return;
+
     const driverId = localStorage.getItem("userId");
     const vehicleId = localStorage.getItem("assignedVehicleId");
     const token = localStorage.getItem("token");
@@ -292,13 +307,14 @@ export default function DriverLocationService() {
   // -------------------------------
   if (!isTracking) {
     return (
-      <div className="fixed bottom-4 left-4 right-4 md:left-4 md:right-auto md:w-96 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-2xl shadow-2xl">
+      <div className={`fixed bottom-4 left-4 right-4 md:left-4 md:right-auto md:w-96 ${isInactive ? 'bg-gradient-to-r from-red-600 to-rose-600' : 'bg-gradient-to-r from-blue-600 to-indigo-600'
+        } text-white p-6 rounded-2xl shadow-2xl`}>
         <div className="flex items-center gap-4">
-          <Navigation className="h-10 w-10 flex-shrink-0" />
+          {isInactive ? <AlertCircle className="h-10 w-10 flex-shrink-0" /> : <Navigation className="h-10 w-10 flex-shrink-0" />}
           <div className="flex-1">
-            <h3 className="text-lg font-bold mb-1">Enable Live Tracking</h3>
+            <h3 className="text-lg font-bold mb-1">{isInactive ? 'Account Inactive' : 'Enable Live Tracking'}</h3>
             <p className="text-xs text-blue-100 mb-3">
-              Share your real-time location with your fleet owner.
+              {isInactive ? 'Contact Admin to Enable' : 'Share your real-time location with your fleet owner.'}
             </p>
             {error && (
               <p className="text-xs bg-black/20 rounded-md px-2 py-1 mb-2">
@@ -306,10 +322,12 @@ export default function DriverLocationService() {
               </p>
             )}
             <button
-              className="w-full bg-white text-blue-600 px-4 py-2 rounded-xl font-semibold text-sm hover:bg-blue-50"
+              className={`w-full bg-white px-4 py-2 rounded-xl font-semibold text-sm ${isInactive ? 'text-red-600 cursor-not-allowed opacity-75' : 'text-blue-600 hover:bg-blue-50'
+                }`}
               onClick={startTracking}
+              disabled={isInactive}
             >
-              📍 Start Tracking
+              {isInactive ? 'Your account is inactive. fast contact admin.' : '📍 Start Tracking'}
             </button>
           </div>
         </div>
