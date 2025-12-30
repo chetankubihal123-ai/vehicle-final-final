@@ -18,6 +18,7 @@ export interface User {
   address?: string;
   gender?: string;
   driverStatus?: 'Available' | 'On Trip' | 'Inactive';
+  vehicleStatus?: 'active' | 'inactive' | 'maintenance';
 }
 
 export interface Vehicle {

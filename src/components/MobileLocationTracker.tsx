@@ -173,7 +173,7 @@ export const MobileLocationTracker = () => {
     const [isInactive, setIsInactive] = useState(false);
 
     useEffect(() => {
-        if (user?.driverStatus === 'Inactive') {
+        if (user?.driverStatus === 'Inactive' || user?.vehicleStatus === 'inactive') {
             setIsInactive(true);
             if (isTracking) {
                 toggleTracking(); // Stop if currently tracking
@@ -181,7 +181,7 @@ export const MobileLocationTracker = () => {
         } else {
             setIsInactive(false);
         }
-    }, [user?.driverStatus]);
+    }, [user?.driverStatus, user?.vehicleStatus]);
 
     const toggleTracking = () => {
         if (isInactive) return; // Prevent enabling
@@ -229,7 +229,7 @@ export const MobileLocationTracker = () => {
                             </div>
                             <h2 className={`text-xl font-bold ${isInactive ? 'text-red-700' : isTracking ? 'text-green-700' : 'text-gray-700'
                                 }`}>
-                                {isInactive ? 'Account Inactive' : isTracking ? 'Tracking Active' : 'Tracking Inactive'}
+                                {isInactive ? 'Account/Vehicle Inactive' : isTracking ? 'Tracking Active' : 'Tracking Inactive'}
                             </h2>
                             {isTracking && (
                                 <p className="text-sm text-green-600 mt-1">
@@ -255,7 +255,7 @@ export const MobileLocationTracker = () => {
                                 : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
                             }`}
                     >
-                        {isInactive ? 'Your account is inactive. fast contact admin.' : isTracking ? '🛑 Stop Tracking' : '▶️ Start Tracking'}
+                        {isInactive ? 'Inactive Account or Vehicle' : isTracking ? '🛑 Stop Tracking' : '▶️ Start Tracking'}
                     </button>
                 </div>
 

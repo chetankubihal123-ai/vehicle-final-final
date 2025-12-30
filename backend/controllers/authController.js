@@ -149,6 +149,7 @@ exports.login = async (req, res) => {
     let assignedVehicleId = null;
     let vehicleData = null;
     let driverStatus = null;
+    let vehicleStatus = null;
 
     if (user.role === "driver") {
       const Driver = require("../models/Driver");
@@ -162,6 +163,7 @@ exports.login = async (req, res) => {
         if (vehicle) {
           assignedVehicleId = vehicle._id;
           vehicleData = vehicle;
+          vehicleStatus = vehicle.status;
           // Deactivate old tracking session for this vehicle
           const RouteHistory = require("../models/RouteHistory");
           await RouteHistory.updateMany(
@@ -182,6 +184,7 @@ exports.login = async (req, res) => {
         assignedVehicleId,
         assignedVehicle: vehicleData,
         driverStatus,
+        vehicleStatus
       },
     });
   } catch (error) {
@@ -246,6 +249,7 @@ exports.verifyLoginOTP = async (req, res) => {
     let assignedVehicleId = null;
     let vehicleData = null;
     let driverStatus = null;
+    let vehicleStatus = null;
 
     if (user.role === "driver") {
       const Driver = require("../models/Driver");
@@ -259,6 +263,7 @@ exports.verifyLoginOTP = async (req, res) => {
         if (vehicle) {
           assignedVehicleId = vehicle._id;
           vehicleData = vehicle;
+          vehicleStatus = vehicle.status;
 
           // Deactivate old tracking session for this vehicle
           const RouteHistory = require("../models/RouteHistory");
@@ -280,6 +285,7 @@ exports.verifyLoginOTP = async (req, res) => {
         assignedVehicleId,
         assignedVehicle: vehicleData,
         driverStatus,
+        vehicleStatus
       },
     });
   } catch (error) {
@@ -300,6 +306,7 @@ exports.getMe = async (req, res) => {
 
     let assignedVehicleId = null;
     let driverStatus = null;
+    let vehicleStatus = null;
 
     if (user.role === "driver") {
       const Driver = require("../models/Driver");
@@ -316,6 +323,7 @@ exports.getMe = async (req, res) => {
         if (vehicle) {
           console.log("✅ Found vehicle:", vehicle._id);
           assignedVehicleId = vehicle._id;
+          vehicleStatus = vehicle.status;
         } else {
           console.log(
             "⚠️ No vehicle found for driver profile:",
@@ -339,6 +347,7 @@ exports.getMe = async (req, res) => {
       gender: user.gender,
       assignedVehicleId,
       driverStatus,
+      vehicleStatus
     });
   } catch (error) {
     console.error("Get Me error:", error);

@@ -38,7 +38,7 @@ export default function DriverLocationService() {
 
         console.log("[DRIVER] loaded /auth/me:", res.data);
 
-        if (res.data.driverStatus === 'Inactive') {
+        if (res.data.driverStatus === 'Inactive' || res.data.vehicleStatus === 'inactive') {
           setIsInactive(true);
           // If we were somehow tracking, stop it (though usually this components mounts fresh)
           if (isTracking) stopTracking();
@@ -312,7 +312,7 @@ export default function DriverLocationService() {
         <div className="flex items-center gap-4">
           {isInactive ? <AlertCircle className="h-10 w-10 flex-shrink-0" /> : <Navigation className="h-10 w-10 flex-shrink-0" />}
           <div className="flex-1">
-            <h3 className="text-lg font-bold mb-1">{isInactive ? 'Account Inactive' : 'Enable Live Tracking'}</h3>
+            <h3 className="text-lg font-bold mb-1">{isInactive ? 'Account/Vehicle Inactive' : 'Enable Live Tracking'}</h3>
             <p className="text-xs text-blue-100 mb-3">
               {isInactive ? 'Contact Admin to Enable' : 'Share your real-time location with your fleet owner.'}
             </p>
@@ -327,7 +327,7 @@ export default function DriverLocationService() {
               onClick={startTracking}
               disabled={isInactive}
             >
-              {isInactive ? 'Your account is inactive. fast contact admin.' : '📍 Start Tracking'}
+              {isInactive ? 'Inactive Account or Vehicle' : '📍 Start Tracking'}
             </button>
           </div>
         </div>
