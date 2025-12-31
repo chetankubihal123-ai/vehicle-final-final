@@ -104,7 +104,9 @@ io.use((socket, next) => {
 // ... imports
 const LiveLocation = require("./models/LiveLocation");
 const RouteHistory = require("./models/RouteHistory");
-const Vehicle = require("./models/Vehicle"); // Added Vehicle model
+const Vehicle = require("./models/Vehicle");
+const User = require("./models/User"); // Added User model
+const { sendTrackingAlert } = require("./utils/emailService");
 
 io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id, "role:", socket.user?.role);
@@ -188,6 +190,26 @@ io.on("connection", (socket) => {
           timestamp: new Date()
         });
         console.log(`[SOCKET] Alert sent to ${ownerRoom} for vehicle ${vehicle.registrationNumber}`);
+
+        // EMAIL ALERT LOGIC
+        try {
+          const owner = await User.findById(vehicle.ownerId);
+          if (owner && owner.email) {
+            console.log(`[SOCKET] Sending email alert to ${owner.email}`);
+            await sendTrackingAlert(
+              owner.email,
+              owner.name || "Owner",
+              socket.user.name || "Driver",
+              vehicle.registrationNumber,
+              vehicle.model
+            );
+          } else {
+            console.log(`[SOCKET] Owner or Owner Email not found for vehicle ${vehicle.registrationNumber}`);
+          }
+        } catch (emailErr) {
+          console.error("[SOCKET] Failed to send email alert:", emailErr);
+        }
+
       } else {
         console.log("[SOCKET] Vehicle has no ownerId");
       }
