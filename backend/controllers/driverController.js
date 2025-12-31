@@ -95,6 +95,8 @@ exports.addDriver = async (req, res) => {
       ownerId: req.user.id,
       licenseNumber,
       assignedVehicle: vehicleId,
+      driverName: name, // Denormalized name
+      driverEmail: email // Denormalized email
     });
 
     await driver.save();
@@ -165,9 +167,16 @@ exports.updateDriver = async (req, res) => {
     if (status !== undefined) driver.status = status;
 
     // Handle User Updates
-    const { password, name, profilePic } = req.body;
+    const { password, name, email, profilePic } = req.body;
     const userUpdate = {};
-    if (name) userUpdate.name = name;
+    if (name) {
+      userUpdate.name = name;
+      driver.driverName = name; // Sync to driver
+    }
+    if (email) {
+      userUpdate.email = email;
+      driver.driverEmail = email; // Sync to driver
+    }
     if (profilePic !== undefined) userUpdate.profilePic = profilePic;
     if (password && password.trim() !== "") {
       userUpdate.password = await bcrypt.hash(password, 10);

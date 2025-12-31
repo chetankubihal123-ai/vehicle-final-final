@@ -5,7 +5,10 @@ const driverSchema = new mongoose.Schema({
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Who employs this driver
     licenseNumber: { type: String, required: true },
     assignedVehicle: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle' },
-    status: { type: String, enum: ['Available', 'On Trip', 'Inactive'], default: 'Available' }
+    status: { type: String, enum: ['Available', 'On Trip', 'Inactive'], default: 'Available' },
+    // Denormalized fields for direct access/display
+    driverName: { type: String },
+    driverEmail: { type: String }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Driver', driverSchema);
