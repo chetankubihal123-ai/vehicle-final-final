@@ -148,12 +148,36 @@ export default function Dashboard() {
   }, [user]);
 
   // ---------------- DERIVED METRICS ----------------
+  // ---------------- DERIVED METRICS ----------------
+  // For drivers, we only care about THEIR assigned vehicle's data
+  // But wait, the backend should already be returning filtered data via useVehicles if we implemented it right?
+  // Let's assume useVehicles returns "what the user is allowed to see".
+  // BUT: The "Total Vehicles" count for a driver is meaningless? No, they might see fleet size.
+  // Actually, user wants to see THEIR stats.
+
+  const isDriver = user?.role === "driver";
+
+  const relevantExpenses = useMemo(() => {
+    if (isDriver && assignedVehicle) {
+      return expenses.filter(e => e.vehicle_id === assignedVehicle._id || e.vehicle_id === assignedVehicle.id);
+    }
+    return expenses;
+  }, [isDriver, assignedVehicle, expenses]);
+
+  const relevantTrips = useMemo(() => {
+    if (isDriver && assignedVehicle) {
+      return trips.filter(t => t.vehicle_id === assignedVehicle._id || t.vehicle_id === assignedVehicle.id);
+    }
+    return trips;
+  }, [isDriver, assignedVehicle, trips]);
+
   const totalVehicles = vehicles.length;
-  const totalTrips = trips.length;
-  const totalExpenses = expenses.reduce(
+  const totalTrips = isDriver ? relevantTrips.length : trips.length;
+  const totalExpenses = (isDriver ? relevantExpenses : expenses).reduce(
     (s: number, e: AnyExpense) => s + (e.amount || 0),
     0
   );
+
   const activeVehicles = vehicles.filter(
     (v: AnyVehicle) => v.status === "active"
   ).length;
@@ -185,7 +209,7 @@ export default function Dashboard() {
       const month = date.getMonth();
       const year = date.getFullYear();
 
-      const amount = expenses
+      const amount = (isDriver ? relevantExpenses : expenses)
         .filter((exp: AnyExpense) => {
           const d = new Date(exp.expense_date);
           return d.getMonth() === month && d.getFullYear() === year;
@@ -194,7 +218,7 @@ export default function Dashboard() {
 
       return { month: format(date, "MMM"), amount };
     });
-  }, [expenses]);
+  }, [expenses, relevantExpenses, isDriver]);
 
   // Fleet health breakdown by status
   const fleetStatusBreakdown = useMemo(() => {
@@ -222,7 +246,7 @@ export default function Dashboard() {
   const topVehiclesByDistance = useMemo(() => {
     const distanceMap: Record<string, number> = {};
 
-    trips.forEach((t: AnyTrip) => {
+    (isDriver ? relevantTrips : trips).forEach((t: AnyTrip) => {
       const distance = (t.end_mileage ?? 0) - (t.start_mileage ?? 0);
       if (!t.vehicle_id) return;
       distanceMap[t.vehicle_id] = (distanceMap[t.vehicle_id] || 0) + distance;
@@ -246,14 +270,14 @@ export default function Dashboard() {
 
   // Recent 5 trips
   const recentTrips = useMemo(
-    () => trips.slice(0, 5),
-    [trips]
+    () => (isDriver ? relevantTrips : trips).slice(0, 5),
+    [trips, relevantTrips, isDriver]
   );
 
   // Recent 5 expenses
   const recentExpensesList = useMemo(
-    () => [...expenses].sort((a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime()).slice(0, 5),
-    [expenses]
+    () => [...(isDriver ? relevantExpenses : expenses)].sort((a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime()).slice(0, 5),
+    [expenses, relevantExpenses, isDriver]
   );
 
   // ---------------- RENDER ----------------
