@@ -271,6 +271,19 @@ export function useVehicles() {
   };
 
   // -----------------------------
+  // DELETE TRIP (NEW)
+  // -----------------------------
+  const deleteTrip = async (id: string) => {
+    try {
+      await axios.delete(`/trips/${id}`);
+      setTrips((prev) => prev.filter((t) => t.id !== id));
+    } catch (error) {
+      console.error("Error deleting trip:", error);
+      throw error;
+    }
+  };
+
+  // -----------------------------
   // ADD EXPENSE
   // -----------------------------
   const addExpense = async (expenseData: FormData | any) => {
@@ -311,7 +324,8 @@ export function useVehicles() {
     editVehicle,
     deleteVehicle, // <-- IMPORTANT EXPORT
     addTrip,
-    editTrip, // <-- NEW
+    editTrip,
+    deleteTrip, // <-- NEW EXPORT
     addExpense,
     deleteExpense, // <-- NEW
     refreshData: fetchData,

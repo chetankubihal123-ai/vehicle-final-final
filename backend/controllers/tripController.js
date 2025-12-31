@@ -192,3 +192,21 @@ exports.updateTrip = async (req, res) => {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
+
+// Delete trip
+exports.deleteTrip = async (req, res) => {
+    try {
+        const trip = await Trip.findById(req.params.id);
+        if (!trip) return res.status(404).json({ message: 'Trip not found' });
+
+        // If driver is currently on this trip, reset their status
+        if (trip.status === 'Ongoing') {
+            await Driver.findByIdAndUpdate(trip.driverId, { status: 'Available' });
+        }
+
+        await Trip.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Trip deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};

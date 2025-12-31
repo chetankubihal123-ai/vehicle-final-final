@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, MapPin, Calendar, Car, Navigation, Edit } from 'lucide-react';
+import { Plus, MapPin, Calendar, Car, Navigation, Edit, Trash } from 'lucide-react';
 import { useVehicles } from '../hooks/useVehicles';
 import { Trip } from '../types';
 import { format, parseISO } from 'date-fns';
@@ -11,7 +11,7 @@ import LocationAutocomplete from './LocationAutocomplete';
 
 export default function TripTracking() {
   const { user } = useAuth();
-  const { vehicles, trips, addTrip, editTrip } = useVehicles();
+  const { vehicles, trips, addTrip, editTrip, deleteTrip } = useVehicles();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTrackModal, setShowTrackModal] = useState(false);
   const [selectedVehicleForTracking, setSelectedVehicleForTracking] = useState<string>('');
@@ -201,6 +201,19 @@ export default function TripTracking() {
             >
               <Edit className="h-5 w-5" />
             </button>
+            {user?.role !== 'driver' && (
+              <button
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to delete this trip?')) {
+                    deleteTrip(trip.id);
+                  }
+                }}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Delete Trip"
+              >
+                <Trash className="h-5 w-5" />
+              </button>
+            )}
           </div>
         </div>
 
