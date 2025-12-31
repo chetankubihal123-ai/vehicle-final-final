@@ -5,16 +5,8 @@ const auth = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 
-// FIXED: Save uploads inside backend/uploads (correct real path)
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, "..", "uploads"));
-    },
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        cb(null, Date.now() + ext);
-    }
-});
+// Use memory storage to store file in buffer
+const storage = multer.memoryStorage();
 
 // Only allow images
 const fileFilter = (req, file, cb) => {
@@ -28,7 +20,7 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
-// FIXED route
+// POST expense with receipt
 router.post(
     '/',
     auth(['fleet_owner', 'admin', 'driver']),
@@ -36,7 +28,11 @@ router.post(
     addExpense
 );
 
+// GET all expenses
 router.get('/', auth(['fleet_owner', 'admin', 'driver']), getExpenses);
+
+// GET receipt image
+router.get('/:id/receipt', require('../controllers/expenseController').getReceiptImage);
 
 router.delete('/:id', auth(['fleet_owner', 'admin']), require('../controllers/expenseController').deleteExpense);
 

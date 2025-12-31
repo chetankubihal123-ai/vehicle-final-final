@@ -8,11 +8,21 @@ exports.addExpense = async (req, res) => {
         const { vehicleId, type, amount, description, date } = req.body;
 
         let receiptUrl = "";
+        let receiptData = null;
+        let receiptContentType = "";
 
-        // When a file is uploaded, store the full URL
+        // If file uploaded, store in DB and create URL
         if (req.file) {
-            const baseUrl = process.env.BASE_URL || "https://vehicle-final.onrender.com";
-            receiptUrl = `${baseUrl}/uploads/${req.file.filename}`;
+            receiptData = req.file.buffer;
+            receiptContentType = req.file.mimetype;
+            // Generate virtual URL that points to our serving endpoint
+            // We need the ID first, but we can construct it after saving or assume standard path
+            // Better strategy: Save first, then update URL, OR just construct URL since ID is generated on save?
+            // Actually, we can just construct it later in frontend, BUT to keep frontend consistent:
+            // We will save empty URL first, then update. OR just set it to "PENDING"
+            // Wait, standard practice:
+            // baseUrl + /api/expenses/RECEIPT/<ID>
+            // Let's create the object first without URL
         }
 
         const expense = new Expense({
@@ -20,10 +30,20 @@ exports.addExpense = async (req, res) => {
             type,
             amount,
             description,
-            receiptUrl,
             date: date || Date.now(),
-            loggedBy: req.user.id
+            loggedBy: req.user.id,
+            receiptData,
+            receiptContentType
         });
+
+        await expense.save();
+
+        // Update the URL now that we have the ID
+        if (req.file) {
+            const baseUrl = process.env.BASE_URL || "https://vehicle-final.onrender.com";
+            expense.receiptUrl = `${baseUrl}/api/expenses/${expense._id}/receipt`;
+            await expense.save();
+        }
 
         await expense.save();
 
@@ -62,6 +82,7 @@ exports.getExpenses = async (req, res) => {
         }
 
         const expenses = await Expense.find(query)
+            .select('-receiptData') // Exclude heavy image data
             .populate("vehicleId", "registrationNumber")
             .populate("loggedBy", "name")
             .sort({ date: -1 });
@@ -71,6 +92,24 @@ exports.getExpenses = async (req, res) => {
     } catch (error) {
         console.error("Expense Fetch Error:", error);
         res.status(500).json({ message: "Server Error", error: error.message });
+    }
+};
+
+// Serve receipt image
+exports.getReceiptImage = async (req, res) => {
+    try {
+        const expense = await Expense.findById(req.params.id);
+
+        if (!expense || !expense.receiptData) {
+            return res.status(404).json({ message: "Image not found" });
+        }
+
+        res.set("Content-Type", expense.receiptContentType);
+        res.send(expense.receiptData);
+
+    } catch (error) {
+        console.error("Image Fetch Error:", error);
+        res.status(500).json({ message: "Server Error" });
     }
 };
 

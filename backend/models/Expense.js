@@ -27,6 +27,10 @@ const expenseSchema = new mongoose.Schema(
         // Full URL stored here
         receiptUrl: { type: String },
 
+        // Store image in DB (buffer)
+        receiptData: { type: Buffer },
+        receiptContentType: { type: String }, // e.g., 'image/png'
+
         loggedBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User"
