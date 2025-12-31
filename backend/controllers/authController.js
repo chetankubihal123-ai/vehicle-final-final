@@ -184,7 +184,9 @@ exports.login = async (req, res) => {
         assignedVehicleId,
         assignedVehicle: vehicleData,
         driverStatus,
-        vehicleStatus
+        driverStatus,
+        vehicleStatus,
+        profilePic: user.profilePic
       },
     });
   } catch (error) {
@@ -285,7 +287,9 @@ exports.verifyLoginOTP = async (req, res) => {
         assignedVehicleId,
         assignedVehicle: vehicleData,
         driverStatus,
-        vehicleStatus
+        driverStatus,
+        vehicleStatus,
+        profilePic: user.profilePic
       },
     });
   } catch (error) {
