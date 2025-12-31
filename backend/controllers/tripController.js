@@ -110,11 +110,15 @@ exports.getTrips = async (req, res) => {
                 // Show trips for the assigned vehicle OR trips driven by this driver
                 query.$or = [
                     { vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) },
-                    { driverId: driver._id }
+                    { driverId: driver._id } // driver._id is already an ObjectId from the DB find
                 ];
             } else if (driver) {
                 // Fallback to trips driven by this driver only
                 query.driverId = driver._id;
+            } else {
+                // Last resort: query by the user's ID if no driver profile found (unlikely but safe)
+                // Assuming trip might store userId directly in some legacy case, or just return empty
+                // query.driverId = new mongoose.Types.ObjectId(req.user.id); 
             }
         } else if (req.user.role === 'fleet_owner' || req.user.role === 'admin') {
             // Owners see trips for their vehicles

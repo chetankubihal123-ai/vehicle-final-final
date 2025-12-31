@@ -74,11 +74,11 @@ exports.getExpenses = async (req, res) => {
                 // This ensures they see what they added even if vehicle assignment is weird
                 query.$or = [
                     { vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) },
-                    { loggedBy: req.user.id }
+                    { loggedBy: new mongoose.Types.ObjectId(req.user.id) }
                 ];
             } else {
                 // Fallback to self-logged expenses
-                query.loggedBy = req.user.id;
+                query.loggedBy = new mongoose.Types.ObjectId(req.user.id);
             }
 
         } else if (req.user.role === "fleet_owner") {
