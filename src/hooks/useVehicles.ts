@@ -51,36 +51,54 @@ export function useVehicles() {
     created_at: item.createdAt,
   });
 
-  const mapTrip = (item: any): Trip => ({
-    id: item._id || item.id,
-    vehicle_id: item.vehicleId?._id || item.vehicleId,
-    driver_id: item.driverId?._id || item.driverId,
-    driver_name: item.driverId?.driverName || item.driverId?.userId?.name || "Unknown",
-    start_mileage: item.startMileage || 0,
-    end_mileage:
-      item.endMileage || item.startMileage + (item.distance || 0) || 0,
-    start_location:
-      typeof item.startLocation === "string"
-        ? item.startLocation
-        : item.startLocation
-          ? `${item.startLocation.lat}, ${item.startLocation.lng}`
-          : "",
-    start_location_lat: item.startLocationLat || "",
-    start_location_lon: item.startLocationLon || "",
-    end_location:
-      typeof item.endLocation === "string"
-        ? item.endLocation
-        : item.endLocation
-          ? `${item.endLocation.lat}, ${item.endLocation.lng}`
-          : "",
-    end_location_lat: item.endLocationLat || "",
-    end_location_lon: item.endLocationLon || "",
-    trip_date: item.startTime,
-    trip_purpose: item.purpose || "",
-    created_at: item.createdAt,
-    fuel_consumed: item.fuelConsumed || 0,
-    goods_carried: "",
-  });
+  const mapTrip = (item: any, driverList: any[] = []): Trip => {
+    // Try finding driver in the list if name is missing
+    let foundName = "Unknown";
+
+    // 1. Direct population check
+    if (item.driverId?.driverName) foundName = item.driverId.driverName;
+    else if (item.driverId?.userId?.name) foundName = item.driverId.userId.name;
+
+    // 2. Fallback: Search in full driver list
+    if (foundName === "Unknown" && item.driverId) {
+      const dId = item.driverId._id || item.driverId;
+      const foundDriver = driverList.find(d => d.id === dId || d.userId?.id === dId);
+      if (foundDriver) {
+        foundName = foundDriver.userId?.name || foundDriver.driverName || "Unknown";
+      }
+    }
+
+    return {
+      id: item._id || item.id,
+      vehicle_id: item.vehicleId?._id || item.vehicleId,
+      driver_id: item.driverId?._id || item.driverId,
+      driver_name: foundName,
+      start_mileage: item.startMileage || 0,
+      end_mileage:
+        item.endMileage || item.startMileage + (item.distance || 0) || 0,
+      start_location:
+        typeof item.startLocation === "string"
+          ? item.startLocation
+          : item.startLocation
+            ? `${item.startLocation.lat}, ${item.startLocation.lng}`
+            : "",
+      start_location_lat: item.startLocationLat || "",
+      start_location_lon: item.startLocationLon || "",
+      end_location:
+        typeof item.endLocation === "string"
+          ? item.endLocation
+          : item.endLocation
+            ? `${item.endLocation.lat}, ${item.endLocation.lng}`
+            : "",
+      end_location_lat: item.endLocationLat || "",
+      end_location_lon: item.endLocationLon || "",
+      trip_date: item.startTime,
+      trip_purpose: item.purpose || "",
+      created_at: item.createdAt,
+      fuel_consumed: item.fuelConsumed || 0,
+      goods_carried: "",
+    };
+  };
 
   const mapExpense = (item: any): Expense => ({
     id: item._id || item.id,
@@ -117,14 +135,17 @@ export function useVehicles() {
         fetchDrivers
       ]);
 
+      const driverList = Array.isArray(driversRes.data) ? driversRes.data.map(mapDriver) : [];
+
       setVehicles(
         Array.isArray(vehiclesRes.data)
           ? vehiclesRes.data.map(mapVehicle)
           : []
       );
       setTrips(
-        Array.isArray(tripsRes.data) ? tripsRes.data.map(mapTrip) : []
+        Array.isArray(tripsRes.data) ? tripsRes.data.map((t: any) => mapTrip(t, driverList)) : []
       );
+      // Pass driverList ^ to mapTrip
 
       console.log("[DEBUG] Frontend Expenses Received:", expensesRes.data?.length);
       setExpenses(
@@ -132,11 +153,7 @@ export function useVehicles() {
           ? expensesRes.data.map(mapExpense)
           : []
       );
-      setDrivers(
-        Array.isArray(driversRes.data)
-          ? driversRes.data.map(mapDriver)
-          : []
-      );
+      setDrivers(driverList);
     } catch (error) {
       console.error("Critical Error fetching data:", error);
     } finally {
