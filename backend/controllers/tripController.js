@@ -105,7 +105,13 @@ exports.getTrips = async (req, res) => {
 
         if (req.user.role === 'driver') {
             const driver = await Driver.findOne({ userId: req.user.id });
-            if (driver) query.driverId = driver._id;
+            if (driver && driver.assignedVehicle) {
+                // Show ALL trips for the assigned vehicle
+                query.vehicleId = driver.assignedVehicle;
+            } else if (driver) {
+                // Fallback to trips driven by this driver only
+                query.driverId = driver._id;
+            }
         } else if (req.user.role === 'fleet_owner' || req.user.role === 'admin') {
             // Owners see trips for their vehicles
             const vehicles = await Vehicle.find({ ownerId: req.user.id }).select('_id');

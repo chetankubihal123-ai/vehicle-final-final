@@ -1,5 +1,6 @@
 const Expense = require('../models/Expense');
 const Vehicle = require('../models/Vehicle');
+const Driver = require('../models/Driver');
 
 // Add expense
 exports.addExpense = async (req, res) => {
@@ -46,7 +47,14 @@ exports.getExpenses = async (req, res) => {
             query.vehicleId = req.query.vehicleId;
 
         } else if (req.user.role === "driver") {
-            query.loggedBy = req.user.id;
+            const driver = await Driver.findOne({ userId: req.user.id });
+            if (driver && driver.assignedVehicle) {
+                // Show ALL expenses for the assigned vehicle
+                query.vehicleId = driver.assignedVehicle;
+            } else {
+                // Fallback to self-logged expenses
+                query.loggedBy = req.user.id;
+            }
 
         } else if (req.user.role === "fleet_owner") {
             const vehicles = await Vehicle.find({ ownerId: req.user.id }).select("_id");

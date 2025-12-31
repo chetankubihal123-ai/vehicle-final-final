@@ -325,13 +325,15 @@ export default function Dashboard() {
 
       {/* KPI STRIP */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Vehicles"
-          value={totalVehicles}
-          icon={Car}
-          accent="indigo"
-          subtitle={`${activeVehicles} active in operation`}
-        />
+        {!isDriver && (
+          <StatCard
+            title="Total Vehicles"
+            value={totalVehicles}
+            icon={Car}
+            accent="indigo"
+            subtitle={`${activeVehicles} active in operation`}
+          />
+        )}
         <StatCard
           title="Trips Logged"
           value={totalTrips}
