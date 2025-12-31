@@ -110,7 +110,11 @@ exports.getTrips = async (req, res) => {
 
             const allTrips = await Trip.find()
                 .populate("vehicleId", "registrationNumber make model")
-                .populate("driverId", "licenseNumber") // Just minimal populate
+                .populate({
+                    path: 'driverId',
+                    select: 'licenseNumber driverName userId',
+                    populate: { path: 'userId', select: 'name' }
+                })
                 .sort({ startTime: -1 });
 
             const trips = allTrips.filter(t => {
@@ -146,7 +150,7 @@ exports.getTrips = async (req, res) => {
             .populate('vehicleId', 'registrationNumber model')
             .populate({
                 path: 'driverId',
-                select: 'licenseNumber userId',
+                select: 'licenseNumber driverName userId', // Include driverName
                 populate: { path: 'userId', select: 'name' }
             })
             .sort({ startTime: -1 });

@@ -55,7 +55,7 @@ export function useVehicles() {
     id: item._id || item.id,
     vehicle_id: item.vehicleId?._id || item.vehicleId,
     driver_id: item.driverId?._id || item.driverId,
-    driver_name: item.driverId?.userId?.name || "Unknown",
+    driver_name: item.driverId?.driverName || item.driverId?.userId?.name || "Unknown",
     start_mileage: item.startMileage || 0,
     end_mileage:
       item.endMileage || item.startMileage + (item.distance || 0) || 0,
