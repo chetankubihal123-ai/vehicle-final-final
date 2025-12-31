@@ -72,16 +72,16 @@ exports.getExpenses = async (req, res) => {
             const driver = await Driver.findOne({ userId: req.user.id });
             console.log("[DEBUG] Driver Profile Found:", driver ? "YES" : "NO");
 
+            const conditions = [
+                { loggedBy: new mongoose.Types.ObjectId(req.user.id) }
+            ];
+
             if (driver && driver.assignedVehicle && mongoose.Types.ObjectId.isValid(driver.assignedVehicle)) {
-                // PRIMARY CASE: Driver has a vehicle. Show ALL expenses for this vehicle.
-                // We use explicit ObjectId to be 100% safe.
                 console.log("[DEBUG] Assigned Vehicle Found and Valid:", driver.assignedVehicle);
-                query.vehicleId = new mongoose.Types.ObjectId(driver.assignedVehicle);
-            } else {
-                // FALLBACK: User has no vehicle OR invalid vehicle ID. Show expenses they logged personally.
-                console.log("[DEBUG] No Assigned Vehicle or Invalid ID. Fallback to loggedBy.");
-                query.loggedBy = new mongoose.Types.ObjectId(req.user.id);
+                conditions.push({ vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) });
             }
+
+            query.$or = conditions;
             console.log("[DEBUG] Final Query:", JSON.stringify(query));
 
 

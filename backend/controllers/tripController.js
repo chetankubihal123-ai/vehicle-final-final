@@ -107,16 +107,21 @@ exports.getTrips = async (req, res) => {
         if (req.user.role === 'driver') {
             const driver = await Driver.findOne({ userId: req.user.id });
 
+            const conditions = [
+                { driverId: new mongoose.Types.ObjectId(req.user.id) }
+            ];
+
+            if (driver) {
+                // Also match by Driver ID from profile
+                conditions.push({ driverId: driver._id });
+            }
+
             if (driver && driver.assignedVehicle && mongoose.Types.ObjectId.isValid(driver.assignedVehicle)) {
                 // PRIMARY CASE: Driver has a vehicle. Show ALL trips for this vehicle.
-                query.vehicleId = new mongoose.Types.ObjectId(driver.assignedVehicle);
-            } else if (driver) {
-                // FALLBACK: Filter by driver ID
-                query.driverId = driver._id;
-            } else {
-                // LAST RESORT
-                query.driverId = req.user.id;
+                conditions.push({ vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) });
             }
+
+            query.$or = conditions;
 
         } else if (req.user.role === 'fleet_owner' || req.user.role === 'admin') {
             // Owners see trips for their vehicles
