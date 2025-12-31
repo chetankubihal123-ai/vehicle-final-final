@@ -107,7 +107,7 @@ exports.getTrips = async (req, res) => {
         if (req.user.role === 'driver') {
             const driver = await Driver.findOne({ userId: req.user.id });
 
-            if (driver && driver.assignedVehicle) {
+            if (driver && driver.assignedVehicle && mongoose.Types.ObjectId.isValid(driver.assignedVehicle)) {
                 // PRIMARY CASE: Driver has a vehicle. Show ALL trips for this vehicle.
                 query.vehicleId = new mongoose.Types.ObjectId(driver.assignedVehicle);
             } else if (driver) {
