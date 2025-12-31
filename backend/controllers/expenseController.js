@@ -71,7 +71,8 @@ exports.getExpenses = async (req, res) => {
             const driver = await Driver.findOne({ userId: req.user.id });
             if (driver && driver.assignedVehicle) {
                 // Show ALL expenses for the assigned vehicle
-                query.vehicleId = driver.assignedVehicle;
+                console.log("[GET_EXPENSES] Driver found:", driver._id, "Vehicle:", driver.assignedVehicle);
+                query.vehicleId = new mongoose.Types.ObjectId(driver.assignedVehicle);
             } else {
                 // Fallback to self-logged expenses
                 query.loggedBy = req.user.id;

@@ -108,7 +108,8 @@ exports.getTrips = async (req, res) => {
             const driver = await Driver.findOne({ userId: req.user.id });
             if (driver && driver.assignedVehicle) {
                 // Show ALL trips for the assigned vehicle (ensure ObjectId)
-                query.vehicleId = driver.assignedVehicle;
+                console.log("[GET_TRIPS] Driver found:", driver._id, "Vehicle:", driver.assignedVehicle);
+                query.vehicleId = new mongoose.Types.ObjectId(driver.assignedVehicle);
             } else if (driver) {
                 // Fallback to trips driven by this driver only
                 query.driverId = driver._id;
