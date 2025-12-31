@@ -105,21 +105,31 @@ exports.getTrips = async (req, res) => {
         let query = {};
 
         if (req.user.role === 'driver') {
-            const driver = await Driver.findOne({ userId: req.user.id });
-            if (driver && driver.assignedVehicle) {
-                // Show trips for the assigned vehicle OR trips driven by this driver
-                query.$or = [
-                    { vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) },
-                    { driverId: driver._id } // driver._id is already an ObjectId from the DB find
-                ];
-            } else if (driver) {
-                // Fallback to trips driven by this driver only
-                query.driverId = driver._id;
-            } else {
-                // Last resort: query by the user's ID if no driver profile found (unlikely but safe)
-                // Assuming trip might store userId directly in some legacy case, or just return empty
-                // query.driverId = new mongoose.Types.ObjectId(req.user.id); 
+            const driver = await Driver.findOne({
+                $or: [
+                    { userId: req.user.id },
+                    { userId: new mongoose.Types.ObjectId(req.user.id) }
+                ]
+            });
+
+            // Base conditions: My trips (String or Object ID) - usually driverId in Trip
+            const orConditions = [
+                { driverId: req.user.id },
+                { driverId: new mongoose.Types.ObjectId(req.user.id) }
+            ];
+
+            if (driver) {
+                // Also match by Driver ID from profile
+                orConditions.push({ driverId: driver._id });
+                orConditions.push({ driverId: new mongoose.Types.ObjectId(driver._id) });
+
+                if (driver.assignedVehicle) {
+                    // Match by Assigned Vehicle
+                    orConditions.push({ vehicleId: driver.assignedVehicle });
+                    orConditions.push({ vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) });
+                }
             }
+            query.$or = orConditions;
         } else if (req.user.role === 'fleet_owner' || req.user.role === 'admin') {
             // Owners see trips for their vehicles
             const vehicles = await Vehicle.find({ ownerId: req.user.id }).select('_id');

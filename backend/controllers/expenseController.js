@@ -68,18 +68,26 @@ exports.getExpenses = async (req, res) => {
             query.vehicleId = req.query.vehicleId;
 
         } else if (req.user.role === "driver") {
-            const driver = await Driver.findOne({ userId: req.user.id });
+            const driver = await Driver.findOne({
+                $or: [
+                    { userId: req.user.id },
+                    { userId: new mongoose.Types.ObjectId(req.user.id) }
+                ]
+            });
+
+            // Base conditions: My logged expenses (String or Object ID)
+            const orConditions = [
+                { loggedBy: req.user.id },
+                { loggedBy: new mongoose.Types.ObjectId(req.user.id) }
+            ];
+
             if (driver && driver.assignedVehicle) {
-                // Show expenses for the assigned vehicle OR expenses logged by this driver
-                // This ensures they see what they added even if vehicle assignment is weird
-                query.$or = [
-                    { vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) },
-                    { loggedBy: new mongoose.Types.ObjectId(req.user.id) }
-                ];
-            } else {
-                // Fallback to self-logged expenses
-                query.loggedBy = new mongoose.Types.ObjectId(req.user.id);
+                // If vehicle assigned, also see expenses for that vehicle
+                orConditions.push({ vehicleId: driver.assignedVehicle });
+                orConditions.push({ vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) });
             }
+
+            query.$or = orConditions;
 
         } else if (req.user.role === "fleet_owner") {
             const vehicles = await Vehicle.find({ ownerId: req.user.id }).select("_id");
