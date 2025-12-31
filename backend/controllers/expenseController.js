@@ -68,21 +68,33 @@ exports.getExpenses = async (req, res) => {
             query.vehicleId = req.query.vehicleId;
 
         } else if (req.user.role === "driver") {
-            console.log("[DEBUG] Driver Requesting Expenses. UserID:", req.user.id);
-            const driver = await Driver.findOne({ userId: req.user.id });
-            console.log("[DEBUG] Driver Profile Found:", driver ? "YES" : "NO");
+            // 1. Find Driver Profile (Try both String and ObjectId for userId to be safe)
+            const driver = await Driver.findOne({
+                $or: [
+                    { userId: req.user.id },
+                    { userId: new mongoose.Types.ObjectId(req.user.id) }
+                ]
+            });
 
-            const conditions = [
-                { loggedBy: new mongoose.Types.ObjectId(req.user.id) }
-            ];
+            console.log("[DEBUG] Driver Found:", driver ? driver._id : "NO");
 
-            if (driver && driver.assignedVehicle && mongoose.Types.ObjectId.isValid(driver.assignedVehicle)) {
-                console.log("[DEBUG] Assigned Vehicle Found and Valid:", driver.assignedVehicle);
-                conditions.push({ vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) });
+            const orConditions = [];
+
+            // 2. Condition: Logged by me (String or ObjectId)
+            orConditions.push({ loggedBy: req.user.id });
+            orConditions.push({ loggedBy: new mongoose.Types.ObjectId(req.user.id) });
+
+            // 3. Condition: Assigned Vehicle (String or ObjectId)
+            if (driver && driver.assignedVehicle) {
+                console.log("[DEBUG] Vehicle Assigned:", driver.assignedVehicle);
+                orConditions.push({ vehicleId: driver.assignedVehicle });
+                if (mongoose.Types.ObjectId.isValid(driver.assignedVehicle)) {
+                    orConditions.push({ vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) });
+                }
             }
 
-            query.$or = conditions;
-            console.log("[DEBUG] Final Query:", JSON.stringify(query));
+            query.$or = orConditions;
+            console.log("[DEBUG] Catch-All Query:", JSON.stringify(query));
 
 
         } else if (req.user.role === "fleet_owner") {
