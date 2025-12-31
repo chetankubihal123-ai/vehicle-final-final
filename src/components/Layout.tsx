@@ -55,6 +55,12 @@ export default function Layout({ children, activeTab, onTabChange }: LayoutProps
       if (trackingIndex !== -1) {
         baseItems.splice(trackingIndex, 1);
       }
+
+      // Remove Vehicles list for drivers (as requested)
+      const vehiclesIndex = baseItems.findIndex(item => item.id === 'vehicles');
+      if (vehiclesIndex !== -1) {
+        baseItems.splice(vehiclesIndex, 1);
+      }
     }
 
     return baseItems;
