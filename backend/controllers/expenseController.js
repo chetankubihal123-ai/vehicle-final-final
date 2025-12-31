@@ -70,9 +70,12 @@ exports.getExpenses = async (req, res) => {
         } else if (req.user.role === "driver") {
             const driver = await Driver.findOne({ userId: req.user.id });
             if (driver && driver.assignedVehicle) {
-                // Show ALL expenses for the assigned vehicle
-                console.log("[GET_EXPENSES] Driver found:", driver._id, "Vehicle:", driver.assignedVehicle);
-                query.vehicleId = new mongoose.Types.ObjectId(driver.assignedVehicle);
+                // Show expenses for the assigned vehicle OR expenses logged by this driver
+                // This ensures they see what they added even if vehicle assignment is weird
+                query.$or = [
+                    { vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) },
+                    { loggedBy: req.user.id }
+                ];
             } else {
                 // Fallback to self-logged expenses
                 query.loggedBy = req.user.id;
