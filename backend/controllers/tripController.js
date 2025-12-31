@@ -116,9 +116,17 @@ exports.getTrips = async (req, res) => {
                 conditions.push({ driverId: driver._id });
             }
 
-            if (driver && driver.assignedVehicle && mongoose.Types.ObjectId.isValid(driver.assignedVehicle)) {
+            if (driver && driver.assignedVehicle) {
+                const vId = driver.assignedVehicle;
+
                 // PRIMARY CASE: Driver has a vehicle. Show ALL trips for this vehicle.
-                conditions.push({ vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) });
+                // Push strict ObjectId
+                if (mongoose.Types.ObjectId.isValid(vId)) {
+                    conditions.push({ vehicleId: new mongoose.Types.ObjectId(vId) });
+                }
+                // Push String version
+                conditions.push({ vehicleId: String(vId) });
+                conditions.push({ vehicleId: vId.toString() });
             }
 
             query.$or = conditions;

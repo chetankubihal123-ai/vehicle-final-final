@@ -84,13 +84,18 @@ exports.getExpenses = async (req, res) => {
             orConditions.push({ loggedBy: req.user.id });
             orConditions.push({ loggedBy: new mongoose.Types.ObjectId(req.user.id) });
 
-            // 3. Condition: Assigned Vehicle (String or ObjectId)
+            // 3. Condition: Assigned Vehicle (String AND ObjectId)
             if (driver && driver.assignedVehicle) {
-                console.log("[DEBUG] Vehicle Assigned:", driver.assignedVehicle);
-                orConditions.push({ vehicleId: driver.assignedVehicle });
-                if (mongoose.Types.ObjectId.isValid(driver.assignedVehicle)) {
-                    orConditions.push({ vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) });
+                const vId = driver.assignedVehicle;
+                console.log("[DEBUG] Vehicle Assigned:", vId);
+
+                // Push strict ObjectId
+                if (mongoose.Types.ObjectId.isValid(vId)) {
+                    orConditions.push({ vehicleId: new mongoose.Types.ObjectId(vId) });
                 }
+                // Push String version (CRITICAL for mismatches)
+                orConditions.push({ vehicleId: String(vId) });
+                orConditions.push({ vehicleId: vId.toString() });
             }
 
             query.$or = orConditions;
