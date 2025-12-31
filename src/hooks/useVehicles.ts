@@ -59,13 +59,27 @@ export function useVehicles() {
     if (item.driverId?.driverName) foundName = item.driverId.driverName;
     else if (item.driverId?.userId?.name) foundName = item.driverId.userId.name;
 
-    // 2. Fallback: Search in full driver list
+    // 2. Fallback: Search in full driver list using driverId
     if (foundName === "Unknown" && item.driverId) {
       const dId = item.driverId._id || item.driverId;
       const foundDriver = driverList.find(d => d.id === dId || d.userId?.id === dId);
       if (foundDriver) {
         foundName = foundDriver.userId?.name || foundDriver.driverName || "Unknown";
       }
+    }
+
+    // 3. Last Resort: Use Vehicle's Assigned Driver
+    if (foundName === "Unknown" && item.vehicleId?.assignedDriver) {
+      const dId = item.vehicleId.assignedDriver;
+      const foundDriver = driverList.find(d => d.id === dId || d.userId?.id === dId);
+      if (foundDriver) {
+        foundName = foundDriver.userId?.name || foundDriver.driverName || "Unknown";
+      }
+    }
+
+    // Debug logging for final "Unknown" cases
+    if (foundName === "Unknown") {
+      // console.log(`[DEBUG] Trip ${item._id} - Driver Unresolved. Vehicle Assigned: ${item.vehicleId?.assignedDriver}`);
     }
 
     return {

@@ -147,7 +147,7 @@ exports.getTrips = async (req, res) => {
         }
 
         const trips = await Trip.find(query)
-            .populate('vehicleId', 'registrationNumber model')
+            .populate('vehicleId', 'registrationNumber model assignedDriver') // Populate assignedDriver
             .populate({
                 path: 'driverId',
                 select: 'licenseNumber driverName userId', // Include driverName
