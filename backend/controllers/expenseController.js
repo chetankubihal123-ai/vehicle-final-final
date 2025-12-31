@@ -68,7 +68,8 @@ exports.getExpenses = async (req, res) => {
             query.vehicleId = req.query.vehicleId;
 
         } else if (req.user.role === "driver") {
-            // 1. Find Driver Profile (Try both String and ObjectId for userId to be safe)
+            // NUCLEAR OPTION: Filter in JS to guarantee match if data exists
+            // 1. Get Driver Info
             const driver = await Driver.findOne({
                 $or: [
                     { userId: req.user.id },
@@ -76,30 +77,33 @@ exports.getExpenses = async (req, res) => {
                 ]
             });
 
-            console.log("[DEBUG] Driver Found:", driver ? driver._id : "NO");
+            // 2. Fetch ALL expenses
+            // Performance note: In a real app this is bad, but for debugging this small app it's fine.
+            const allExpenses = await Expense.find()
+                .select('-receiptData')
+                .populate("vehicleId", "registrationNumber")
+                .populate("loggedBy", "name")
+                .sort({ date: -1 });
 
-            const orConditions = [];
+            // 3. Filter in memory
+            const expenses = allExpenses.filter(e => {
+                // Check Logged By
+                if (e.loggedBy && (String(e.loggedBy._id) === String(req.user.id) || String(e.loggedBy) === String(req.user.id))) return true;
 
-            // 2. Condition: Logged by me (String or ObjectId)
-            orConditions.push({ loggedBy: req.user.id });
-            orConditions.push({ loggedBy: new mongoose.Types.ObjectId(req.user.id) });
+                // Check Assigned Vehicle
+                if (driver && driver.assignedVehicle) {
+                    const vId = e.vehicleId ? (String(e.vehicleId._id || e.vehicleId)) : "";
+                    const driverVId = String(driver.assignedVehicle);
 
-            // 3. Condition: Assigned Vehicle (String AND ObjectId)
-            if (driver && driver.assignedVehicle) {
-                const vId = driver.assignedVehicle;
-                console.log("[DEBUG] Vehicle Assigned:", vId);
-
-                // Push strict ObjectId
-                if (mongoose.Types.ObjectId.isValid(vId)) {
-                    orConditions.push({ vehicleId: new mongoose.Types.ObjectId(vId) });
+                    if (vId === driverVId) return true;
                 }
-                // Push String version (CRITICAL for mismatches)
-                orConditions.push({ vehicleId: String(vId) });
-                orConditions.push({ vehicleId: vId.toString() });
-            }
 
-            query.$or = orConditions;
-            console.log("[DEBUG] Catch-All Query:", JSON.stringify(query));
+                return false;
+            });
+
+            console.log(`[DEBUG] JS Filtered Expenses: ${expenses.length} matches found.`);
+            res.json(expenses);
+            return; // EXIT EARLY
 
 
         } else if (req.user.role === "fleet_owner") {

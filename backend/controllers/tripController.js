@@ -105,31 +105,35 @@ exports.getTrips = async (req, res) => {
         let query = {};
 
         if (req.user.role === 'driver') {
+            // NUCLEAR OPTION: Filter in JS to guarantee match
             const driver = await Driver.findOne({ userId: req.user.id });
 
-            const conditions = [
-                { driverId: new mongoose.Types.ObjectId(req.user.id) }
-            ];
+            const allTrips = await Trip.find()
+                .populate("vehicleId", "registrationNumber make model")
+                .populate("driverId", "licenseNumber") // Just minimal populate
+                .sort({ startTime: -1 });
 
-            if (driver) {
-                // Also match by Driver ID from profile
-                conditions.push({ driverId: driver._id });
-            }
-
-            if (driver && driver.assignedVehicle) {
-                const vId = driver.assignedVehicle;
-
-                // PRIMARY CASE: Driver has a vehicle. Show ALL trips for this vehicle.
-                // Push strict ObjectId
-                if (mongoose.Types.ObjectId.isValid(vId)) {
-                    conditions.push({ vehicleId: new mongoose.Types.ObjectId(vId) });
+            const trips = allTrips.filter(t => {
+                // Check Driver ID Matches (User ID or Driver ID)
+                if (t.driverId) {
+                    const tDriverId = String(t.driverId._id || t.driverId);
+                    if (tDriverId === String(req.user.id)) return true;
+                    if (driver && tDriverId === String(driver._id)) return true;
                 }
-                // Push String version
-                conditions.push({ vehicleId: String(vId) });
-                conditions.push({ vehicleId: vId.toString() });
-            }
 
-            query.$or = conditions;
+                // Check Vehicle Matches (Assigned Vehicle)
+                if (driver && driver.assignedVehicle) {
+                    const tVId = t.vehicleId ? String(t.vehicleId._id || t.vehicleId) : "";
+                    const driverVId = String(driver.assignedVehicle);
+                    if (tVId === driverVId) return true;
+                }
+
+                return false;
+            });
+
+            console.log(`[DEBUG] JS Filtered Trips: ${trips.length} matches found.`);
+            res.json(trips);
+            return; // EXIT EARLY
 
         } else if (req.user.role === 'fleet_owner' || req.user.role === 'admin') {
             // Owners see trips for their vehicles
