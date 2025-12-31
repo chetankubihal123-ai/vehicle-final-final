@@ -281,7 +281,7 @@ export default function Dashboard() {
   );
 
   // ---------------- RENDER ----------------
-  const isDriver = user?.role === "driver";
+
 
   return (
     <div className="space-y-6 bg-slate-50 p-6">
