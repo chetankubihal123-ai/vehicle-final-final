@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Trip = require('../models/Trip');
 const Vehicle = require('../models/Vehicle');
 const Driver = require('../models/Driver');
@@ -106,7 +107,7 @@ exports.getTrips = async (req, res) => {
         if (req.user.role === 'driver') {
             const driver = await Driver.findOne({ userId: req.user.id });
             if (driver && driver.assignedVehicle) {
-                // Show ALL trips for the assigned vehicle
+                // Show ALL trips for the assigned vehicle (ensure ObjectId)
                 query.vehicleId = driver.assignedVehicle;
             } else if (driver) {
                 // Fallback to trips driven by this driver only

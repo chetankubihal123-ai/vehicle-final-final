@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Expense = require('../models/Expense');
 const Vehicle = require('../models/Vehicle');
 const Driver = require('../models/Driver');
