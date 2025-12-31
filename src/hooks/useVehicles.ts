@@ -102,11 +102,19 @@ export function useVehicles() {
     if (!user) return;
     setLoading(true);
     try {
+      // INDEPENDENT FETCHES (Fail-safe)
+      // If one fails, others should still load.
+
+      const fetchVehicles = axios.get("/vehicles").catch(e => { console.warn("Fetch Vehicles Failed"); return { data: [] }; });
+      const fetchTrips = axios.get("/trips").catch(e => { console.warn("Fetch Trips Failed"); return { data: [] }; });
+      const fetchExpenses = axios.get("/expenses").catch(e => { console.warn("Fetch Expenses Failed"); return { data: [] }; });
+      const fetchDrivers = axios.get("/drivers").catch(e => { console.warn("Fetch Drivers Failed"); return { data: [] }; });
+
       const [vehiclesRes, tripsRes, expensesRes, driversRes] = await Promise.all([
-        axios.get("/vehicles"),
-        axios.get("/trips"),
-        axios.get("/expenses"),
-        axios.get("/drivers")
+        fetchVehicles,
+        fetchTrips,
+        fetchExpenses,
+        fetchDrivers
       ]);
 
       setVehicles(
@@ -117,6 +125,8 @@ export function useVehicles() {
       setTrips(
         Array.isArray(tripsRes.data) ? tripsRes.data.map(mapTrip) : []
       );
+
+      console.log("[DEBUG] Frontend Expenses Received:", expensesRes.data?.length);
       setExpenses(
         Array.isArray(expensesRes.data)
           ? expensesRes.data.map(mapExpense)
@@ -128,7 +138,7 @@ export function useVehicles() {
           : []
       );
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Critical Error fetching data:", error);
     } finally {
       setLoading(false);
     }
