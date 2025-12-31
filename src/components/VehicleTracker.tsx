@@ -303,13 +303,13 @@ export default function VehicleTracker({ vehicleId, vehicleName, onSaveTrip }: P
       </div>
 
       {/* STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard
           icon={<MapPin className="h-5 w-5 text-green-700" />}
           title="Location"
           value={`${currentLocation.lat.toFixed(
-            6
-          )}, ${currentLocation.lng.toFixed(6)}`}
+            4
+          )}, ${currentLocation.lng.toFixed(4)}`}
           color="green"
         />
         <StatCard
@@ -319,9 +319,15 @@ export default function VehicleTracker({ vehicleId, vehicleName, onSaveTrip }: P
           color="blue"
         />
         <StatCard
+          icon={<Navigation className="h-5 w-5 text-indigo-700" />}
+          title="Trip Distance"
+          value={`${calculateRouteDistance(locationHistory).toFixed(2)} km`}
+          color="indigo"
+        />
+        <StatCard
           icon={<Clock className="h-5 w-5 text-purple-700" />}
           title="Last Update"
-          value={currentLocation.timestamp.toLocaleTimeString()}
+          value={currentLocation.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           color="purple"
         />
       </div>
@@ -400,16 +406,44 @@ export default function VehicleTracker({ vehicleId, vehicleName, onSaveTrip }: P
   );
 }
 
+// Helper to calc distance between array of points (lat,lng)
+function calculateRouteDistance(points: [number, number][]): number {
+  if (points.length < 2) return 0;
+  let totalKm = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    totalKm += getDistanceFromLatLonInKm(points[i][0], points[i][1], points[i + 1][0], points[i + 1][1]);
+  }
+  return totalKm;
+}
+
+function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in km
+  return d;
+}
+
+function deg2rad(deg: number) {
+  return deg * (Math.PI / 180);
+}
+
 function StatCard({
   icon,
   title,
   value,
   color,
+  // Add indigo to type
 }: {
   icon: JSX.Element;
   title: string;
   value: string;
-  color: "green" | "blue" | "purple";
+  color: "green" | "blue" | "purple" | "indigo";
 }) {
   const colors: Record<
     string,
@@ -430,6 +464,11 @@ function StatCard({
       border: "border-purple-200",
       pill: "bg-purple-500",
     },
+    indigo: {
+      bg: "bg-indigo-50",
+      border: "border-indigo-200",
+      pill: "bg-indigo-500",
+    }
   };
 
   const c = colors[color];
@@ -437,7 +476,7 @@ function StatCard({
   return (
     <div className={`p-4 rounded-lg border ${c.bg} ${c.border}`}>
       <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${c.pill}`}>{icon}</div>
+        <div className={`p-2 rounded-lg ${c.pill} text-white`}>{icon}</div>
         <div>
           <p className="text-sm text-gray-600">{title}</p>
           <p className="font-semibold text-gray-900">{value}</p>
