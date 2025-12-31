@@ -79,6 +79,10 @@ export default function LoginPage() {
         setError("Password must be between 5 and 12 characters.");
         return;
       }
+      if (!/(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+        setError("Password must contain at least one uppercase letter and one number.");
+        return;
+      }
     }
 
     try {
@@ -91,6 +95,14 @@ export default function LoginPage() {
         } else {
           if (!newPassword) {
             setError("Please enter a new password.");
+            return;
+          }
+          if (newPassword.length < 5 || newPassword.length > 12) {
+            setError("Password must be between 5 and 12 characters.");
+            return;
+          }
+          if (!/(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
+            setError("Password must contain at least one uppercase letter and one number.");
             return;
           }
           await resetPassword(formData.email, otp, newPassword);

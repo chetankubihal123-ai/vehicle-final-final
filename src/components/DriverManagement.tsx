@@ -105,6 +105,14 @@ export default function DriverManagement() {
       };
 
       if (formData.password) {
+        if (formData.password.length < 5 || formData.password.length > 12) {
+          alert("Password must be between 5 and 12 characters.");
+          return;
+        }
+        if (!/(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+          alert("Password must contain at least one uppercase letter and one number.");
+          return;
+        }
         payload.password = formData.password;
       }
 
