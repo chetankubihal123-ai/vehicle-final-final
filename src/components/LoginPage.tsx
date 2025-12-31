@@ -69,8 +69,16 @@ export default function LoginPage() {
     setSuccess("");
 
     if (!validateEmail(formData.email)) {
-      setError("Please enter a valid email address.");
+      setError("Please enter a valid email address (must contain @).");
       return;
+    }
+
+    // Password Length Validation (5-12 characters)
+    if (!isOtpLogin && !isForgotPassword && !awaitingRegistrationOtp) {
+      if (formData.password.length < 5 || formData.password.length > 12) {
+        setError("Password must be between 5 and 12 characters.");
+        return;
+      }
     }
 
     try {
@@ -448,12 +456,15 @@ export default function LoginPage() {
                           type="email"
                           required
                           value={formData.email}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              email: e.target.value,
-                            })
-                          }
+                          onChange={(e) => {
+                            if (e.target.value.length <= 40) {
+                              setFormData({
+                                ...formData,
+                                email: e.target.value,
+                              });
+                            }
+                          }}
+                          maxLength={40}
                           className="w-full px-4 py-3 rounded-xl border"
                           placeholder="you@example.com"
                         />
@@ -530,12 +541,16 @@ export default function LoginPage() {
                           type={showPassword ? "text" : "password"}
                           required
                           value={formData.password}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              password: e.target.value,
-                            })
-                          }
+                          onChange={(e) => {
+                            if (e.target.value.length <= 12) {
+                              setFormData({
+                                ...formData,
+                                password: e.target.value,
+                              });
+                            }
+                          }}
+                          maxLength={12}
+                          minLength={5}
                           className="w-full px-4 py-3 rounded-xl border"
                           placeholder="••••••••"
                         />
@@ -567,7 +582,13 @@ export default function LoginPage() {
                             type={showPassword ? "text" : "password"}
                             required
                             value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
+                            onChange={(e) => {
+                              if (e.target.value.length <= 12) {
+                                setNewPassword(e.target.value);
+                              }
+                            }}
+                            maxLength={12}
+                            minLength={5}
                             className="w-full px-4 py-3 rounded-xl border"
                             placeholder="••••••••"
                           />
