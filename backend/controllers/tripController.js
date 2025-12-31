@@ -105,31 +105,19 @@ exports.getTrips = async (req, res) => {
         let query = {};
 
         if (req.user.role === 'driver') {
-            const driver = await Driver.findOne({
-                $or: [
-                    { userId: req.user.id },
-                    { userId: new mongoose.Types.ObjectId(req.user.id) }
-                ]
-            });
+            const driver = await Driver.findOne({ userId: req.user.id });
 
-            // Base conditions: My trips (String or Object ID) - usually driverId in Trip
-            const orConditions = [
-                { driverId: req.user.id },
-                { driverId: new mongoose.Types.ObjectId(req.user.id) }
-            ];
-
-            if (driver) {
-                // Also match by Driver ID from profile
-                orConditions.push({ driverId: driver._id });
-                orConditions.push({ driverId: new mongoose.Types.ObjectId(driver._id) });
-
-                if (driver.assignedVehicle) {
-                    // Match by Assigned Vehicle
-                    orConditions.push({ vehicleId: driver.assignedVehicle });
-                    orConditions.push({ vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) });
-                }
+            if (driver && driver.assignedVehicle) {
+                // PRIMARY CASE: Driver has a vehicle. Show ALL trips for this vehicle.
+                query.vehicleId = new mongoose.Types.ObjectId(driver.assignedVehicle);
+            } else if (driver) {
+                // FALLBACK: Filter by driver ID
+                query.driverId = driver._id;
+            } else {
+                // LAST RESORT
+                query.driverId = req.user.id;
             }
-            query.$or = orConditions;
+
         } else if (req.user.role === 'fleet_owner' || req.user.role === 'admin') {
             // Owners see trips for their vehicles
             const vehicles = await Vehicle.find({ ownerId: req.user.id }).select('_id');

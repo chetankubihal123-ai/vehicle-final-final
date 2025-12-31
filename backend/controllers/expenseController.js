@@ -68,26 +68,17 @@ exports.getExpenses = async (req, res) => {
             query.vehicleId = req.query.vehicleId;
 
         } else if (req.user.role === "driver") {
-            const driver = await Driver.findOne({
-                $or: [
-                    { userId: req.user.id },
-                    { userId: new mongoose.Types.ObjectId(req.user.id) }
-                ]
-            });
-
-            // Base conditions: My logged expenses (String or Object ID)
-            const orConditions = [
-                { loggedBy: req.user.id },
-                { loggedBy: new mongoose.Types.ObjectId(req.user.id) }
-            ];
+            const driver = await Driver.findOne({ userId: req.user.id });
 
             if (driver && driver.assignedVehicle) {
-                // If vehicle assigned, also see expenses for that vehicle
-                orConditions.push({ vehicleId: driver.assignedVehicle });
-                orConditions.push({ vehicleId: new mongoose.Types.ObjectId(driver.assignedVehicle) });
+                // PRIMARY CASE: Driver has a vehicle. Show ALL expenses for this vehicle.
+                // We use explicit ObjectId to be 100% safe.
+                query.vehicleId = new mongoose.Types.ObjectId(driver.assignedVehicle);
+            } else {
+                // FALLBACK: User has no vehicle. Show expenses they logged personally.
+                query.loggedBy = new mongoose.Types.ObjectId(req.user.id);
             }
 
-            query.$or = orConditions;
 
         } else if (req.user.role === "fleet_owner") {
             const vehicles = await Vehicle.find({ ownerId: req.user.id }).select("_id");
