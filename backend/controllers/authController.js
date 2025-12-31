@@ -456,20 +456,39 @@ exports.updateProfilePic = async (req, res) => {
     }
 
     const userId = req.user.id;
-    const profilePicPath = `/uploads/profiles/${req.file.filename}`;
+    // URL to the new serving route
+    const profilePicUrl = `${process.env.BASE_URL || ''}/api/auth/profile-image/${userId}`;
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { profilePic: profilePicPath },
-      { new: true }
-    );
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.profileData = req.file.buffer;
+    user.profileContentType = req.file.mimetype;
+    user.profilePic = profilePicUrl;
+
+    await user.save();
 
     res.json({
       message: "Profile picture updated successfully",
-      profilePic: profilePicPath
+      profilePic: profilePicUrl
     });
   } catch (error) {
     console.error("Update Profile Pic error:", error);
     res.status(500).json({ message: "Server Error" });
+  }
+};
+
+exports.getProfileImage = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user || !user.profileData) {
+      return res.status(404).json({ message: 'Image not found' });
+    }
+
+    res.set('Content-Type', user.profileContentType);
+    res.send(user.profileData);
+  } catch (error) {
+    console.error("Error serving profile image:", error);
+    res.status(500).json({ message: 'Server Error' });
   }
 };

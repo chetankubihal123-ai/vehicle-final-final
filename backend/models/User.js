@@ -14,6 +14,8 @@ const userSchema = new mongoose.Schema({
     otpExpires: { type: Date },
     isActive: { type: Boolean, default: true },
     profilePic: { type: String, default: "" },
+    profileData: { type: Buffer },
+    profileContentType: { type: String },
     phone: { type: String, default: "" },
     dob: { type: String, default: "" },
     address: { type: String, default: "" },

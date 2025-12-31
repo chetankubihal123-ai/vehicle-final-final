@@ -15,7 +15,7 @@ import {
   Radio,
   User as UserIcon,
   ChevronDown,
-  Settings,
+
   Phone,
   Mail
 } from 'lucide-react';
@@ -253,16 +253,7 @@ export default function Layout({ children, activeTab, onTabChange }: LayoutProps
                       <span className="font-medium text-sm">Profile Settings</span>
                     </button>
 
-                    <button
-                      onClick={() => {
-                        // Settings logic if any
-                        setDropdownOpen(false);
-                      }}
-                      className="w-full flex items-center space-x-3 px-5 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors text-left"
-                    >
-                      <Settings className="h-4 w-4" />
-                      <span className="font-medium text-sm">App Settings</span>
-                    </button>
+
 
                     <div className="my-2 border-t border-gray-50" />
 
