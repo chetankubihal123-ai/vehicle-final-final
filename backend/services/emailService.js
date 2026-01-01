@@ -141,4 +141,99 @@ async function sendOTP(email, otp, name) {
   }
 }
 
-module.exports = { sendOTP };
+// HTML template for Reminder email
+const createReminderEmailHTML = (name, vehicleNumber, type, date, daysLeft) => `
+  <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 500px; margin: 0 auto;">
+    <h2 style="color: #4f46e5; text-align: center;">VehicleTracker Reminder</h2>
+    <p>Hello ${name},</p>
+    <p>This is an important reminder regarding your vehicle <strong>${vehicleNumber}</strong>.</p>
+    
+    <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 4px;">
+      <h3 style="color: #991b1b; margin: 0 0 10px 0;">${type} Due Soon</h3>
+      <p style="margin: 5px 0; color: #b91c1c;">Due Date: <strong>${new Date(date).toDateString()}</strong></p>
+      <p style="margin: 5px 0; color: #b91c1c;">Status: <strong>${daysLeft <= 0 ? "Overdue!" : `Due in ${daysLeft} days`}</strong></p>
+    </div>
+
+    <p style="color: #4b5563;">Please ensure to renew/service your vehicle to avoid penalties or breakdowns.</p>
+    
+    <div style="text-align: center; margin-top: 30px;">
+      <a href="https://vehicle-final-final-1.onrender.com" style="background-color: #4f46e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">Opened Dashboard</a>
+    </div>
+  </div>
+`;
+
+// Send Reminder Email
+async function sendReminderEmail(email, name, vehicleNumber, type, date, daysLeft) {
+  try {
+    console.log(`📧 Sending Reminder to ${email} for ${vehicleNumber}...`);
+    const subject = `Action Required: ${type} for ${vehicleNumber}`;
+    const html = createReminderEmailHTML(name, vehicleNumber, type, date, daysLeft);
+
+    // 1. Try Brevo API (HTTP)
+    if (process.env.BREVO_API_KEY) {
+      try {
+        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            "accept": "application/json",
+            "api-key": process.env.BREVO_API_KEY,
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({
+            sender: { name: "VehicleTracker", email: process.env.BREVO_USER || "reminders@brevo.com" },
+            to: [{ email: email }],
+            subject: subject,
+            htmlContent: html
+          })
+        });
+
+        if (response.ok) {
+          console.log("✅ Reminder sent via Brevo API");
+          return true;
+        }
+      } catch (err) {
+        console.error("Brevo Reminder Error:", err.message);
+      }
+    }
+
+    // 2. Try Gmail/SMTP
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+      try {
+        await transporter.sendMail({
+          from: `"VehicleTracker Reminders" <${process.env.EMAIL_USER}>`,
+          to: email,
+          subject: subject,
+          html: html,
+        });
+        console.log("✅ Reminder sent via Gmail SMTP");
+        return true;
+      } catch (err) {
+        console.warn("Gmail Reminder Error:", err.message);
+      }
+    }
+
+    // 3. Try Resend
+    if (resend) {
+      try {
+        await resend.emails.send({
+          from: "VehicleTracker <reminders@resend.dev>",
+          to: email,
+          subject: subject,
+          html: html,
+        });
+        console.log("✅ Reminder sent via Resend");
+        return true;
+      } catch (err) {
+        console.warn("Resend Reminder Error:", err.message);
+      }
+    }
+
+    return false;
+
+  } catch (error) {
+    console.error("❌ SendReminder fatal error:", error.message);
+    return false;
+  }
+}
+
+module.exports = { sendOTP, sendReminderEmail };

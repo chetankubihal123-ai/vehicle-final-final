@@ -1,53 +1,63 @@
 const cron = require('node-cron');
 const Vehicle = require('../models/Vehicle');
 const Reminder = require('../models/Reminder');
-const { sendOTP } = require('./emailService'); // Reusing email service
+const { sendReminderEmail } = require('./emailService');
 const User = require('../models/User');
 
 const checkReminders = async () => {
     console.log('Checking for reminders...');
     const today = new Date();
-    const threeDaysLater = new Date();
+    // Normalize today to start of day for comparison
+    today.setHours(0, 0, 0, 0);
+
+    const threeDaysLater = new Date(today);
     threeDaysLater.setDate(today.getDate() + 3);
 
     try {
         const vehicles = await Vehicle.find().populate('ownerId');
 
         for (const vehicle of vehicles) {
-            // Check Service
-            if (vehicle.serviceDate && vehicle.serviceDate <= threeDaysLater && vehicle.serviceDate >= today) {
-                await sendReminder(vehicle, 'Service', vehicle.serviceDate);
-            }
-            // Check Insurance
-            if (vehicle.insuranceExpiry && vehicle.insuranceExpiry <= threeDaysLater && vehicle.insuranceExpiry >= today) {
-                await sendReminder(vehicle, 'Insurance Expiry', vehicle.insuranceExpiry);
-            }
-            // Check Permit
-            if (vehicle.permitExpiry && vehicle.permitExpiry <= threeDaysLater && vehicle.permitExpiry >= today) {
-                await sendReminder(vehicle, 'Permit Expiry', vehicle.permitExpiry);
-            }
+            if (!vehicle.ownerId || !vehicle.ownerId.email) continue;
+
+            const checkDate = (dateStr, type) => {
+                if (!dateStr) return;
+                const date = new Date(dateStr);
+                date.setHours(0, 0, 0, 0);
+
+                // Check if date is within next 3 days OR is overdue (in the past)
+                // We want to alert if: date <= threeDaysLater
+                // But typically we don't want to alert for things months ago unless we want "Overdue" alerts.
+                // Let's assume we alert if it's <= 3 days from now AND >= 30 days ago (to not spam forever)
+
+                if (date <= threeDaysLater) {
+                    const diffTime = date - today;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    // Send alert
+                    sendReminder(vehicle, type, date, diffDays);
+                }
+            };
+
+            checkDate(vehicle.serviceDate, 'Service');
+            checkDate(vehicle.insuranceExpiry, 'Insurance Expiry');
+            checkDate(vehicle.permitExpiry, 'Permit Expiry');
         }
     } catch (error) {
         console.error('Error checking reminders:', error);
     }
 };
 
-const sendReminder = async (vehicle, type, date) => {
-    // Check if reminder already sent today/recently to avoid spam (omitted for simplicity)
+const sendReminder = async (vehicle, type, date, daysLeft) => {
     const email = vehicle.ownerId.email;
-    const subject = `Reminder: ${type} for ${vehicle.registrationNumber}`;
-    const text = `Hello ${vehicle.ownerId.name},\n\nThis is a reminder that your vehicle ${vehicle.registrationNumber} is due for ${type} on ${date.toDateString()}.\n\nPlease take necessary action.`;
+    const name = vehicle.ownerId.name || "Owner";
 
-    // Use a modified sendEmail function (mocked here by reusing sendOTP logic or creating new)
-    // For now, we'll just log it or use the existing sendOTP function if it was generic enough.
-    // Let's assume we need a generic sendEmail function.
+    // Prevent duplicate emails for same vehicle+type+date check (Optional optimization)
+    // For now, we rely on the fact cron runs once a day.
 
-    // Quick fix: Import transporter from emailService if exported, or just use console.log for now as "Email Sent"
-    console.log(`Sending email to ${email}: ${subject}`);
-    // In real app, call transporter.sendMail(...)
+    await sendReminderEmail(email, name, vehicle.registrationNumber, type, date, daysLeft);
 };
 
-// Schedule cron job to run every day at 9 AM
+// Schedule cron job to run every day at 9:00 AM
 cron.schedule('0 9 * * *', checkReminders);
 
 module.exports = { checkReminders };
