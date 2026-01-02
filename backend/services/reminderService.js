@@ -59,13 +59,13 @@ const sendReminder = async (vehicle, type, date, daysLeft) => {
 
 // Schedule cron job to run every day at 9:00 AM
 // Schedule cron job to run every day at 9:00 AM
-cron.schedule('0 9 * * *', checkReminders);
+// Schedule cron job to run every day at 9:00 AM
+// cron.schedule('0 9 * * *', checkReminders); // DISABLED AS PER USER REQUEST
 
 // TRIGGER ON STARTUP (For testing/verification purposes)
-// This ensures that when the server restarts (after deploy), it checks immediately.
-setTimeout(() => {
-    console.log("🚀 Running immediate reminder check on server startup...");
-    checkReminders();
-}, 5000); // 5 seconds after startup
+// setTimeout(() => {
+//     console.log("🚀 Running immediate reminder check on server startup...");
+//     checkReminders();
+// }, 5000); // DISABLED AS PER USER REQUEST
 
 module.exports = { checkReminders };
